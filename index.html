@@ -1,0 +1,1606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Where Should I Be?</title>
+<meta name="description" content="A soccer positioning quiz for a 2-1-2-1 team on a 7v7 pitch with build-out lines.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #eaf3ff;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #526077;
+  --line: #d7e1ef;
+  --blue: #1d4ed8;
+  --blue-deep: #1e3a8a;
+  --blue-soft: #e0eaff;
+  --gold: #f5b301;
+  --good: #15803d;
+  --good-soft: #dcfce7;
+  --close: #4d7c0f;
+  --ok: #b45309;
+  --ok-soft: #fef3c7;
+  --bad: #b91c1c;
+  --bad-soft: #fee2e2;
+  --shadow: 0 6px 24px rgba(15, 23, 42, .08);
+  --grass-a: #2e8b45;
+  --grass-b: #33964b;
+  --grass-edge: #277a3c;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1324;
+    --card: #131d33;
+    --ink: #e8eef9;
+    --muted: #9aa8bf;
+    --line: #26344f;
+    --blue: #3b6ff0;
+    --blue-deep: #1e3a8a;
+    --blue-soft: #1b2b4d;
+    --good: #4ade80;
+    --good-soft: #12301f;
+    --close: #a3e635;
+    --ok: #fbbf24;
+    --ok-soft: #3a2a0a;
+    --bad: #f87171;
+    --bad-soft: #3b1515;
+    --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+    --grass-a: #26763a;
+    --grass-b: #2a7f3f;
+    --grass-edge: #1f6431;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1324;
+  --card: #131d33;
+  --ink: #e8eef9;
+  --muted: #9aa8bf;
+  --line: #26344f;
+  --blue: #3b6ff0;
+  --blue-deep: #1e3a8a;
+  --blue-soft: #1b2b4d;
+  --good: #4ade80;
+  --good-soft: #12301f;
+  --close: #a3e635;
+  --ok: #fbbf24;
+  --ok-soft: #3a2a0a;
+  --bad: #f87171;
+  --bad-soft: #3b1515;
+  --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+  --grass-a: #26763a;
+  --grass-b: #2a7f3f;
+  --grass-edge: #1f6431;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Fredoka', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+}
+.app { max-width: 1200px; margin: 0 auto; padding: 10px 16px 32px; }
+h2, h3 { margin: 0; line-height: 1.2; }
+p { margin: 0; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+/* header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 24px; min-width: 0; }
+.logo { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--blue); font-size: 24px; }
+.top-actions { display: flex; gap: 8px; flex: none; }
+
+/* buttons */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 14px;
+  padding: 11px 16px;
+  cursor: pointer;
+  background: var(--blue-soft);
+  color: var(--ink);
+  transition: transform .08s ease, filter .15s ease;
+}
+.btn:hover { filter: brightness(1.04); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible, .icon-btn:focus-visible, .opt:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.btn.primary { background: var(--blue); color: #fff; box-shadow: 0 4px 0 var(--blue-deep); }
+.btn.primary:active { box-shadow: 0 2px 0 var(--blue-deep); transform: translateY(2px); }
+.btn.big { font-size: 20px; padding: 14px 20px; }
+.btn.wide { width: 100%; }
+.btn.small { font-size: 15px; padding: 8px 12px; border-radius: 12px; }
+.btn.ghost { background: transparent; border: 2px solid var(--line); }
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+.icon-btn {
+  flex: none; font: inherit; font-size: 20px; line-height: 1;
+  width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--blue-soft); color: var(--ink);
+}
+
+/* setup */
+.setup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 18px; align-items: start; max-width: 820px; margin: 0 auto; }
+.pick-card { text-align: center; }
+.mini-pitch { max-width: 330px; margin: 12px auto 10px; }
+.mini-pitch svg { width: 100%; height: auto; display: block; border-radius: 14px; }
+.role-name { font-size: 26px; font-weight: 700; }
+.best { color: var(--ok); font-weight: 600; margin-top: 2px; min-height: 1.4em; }
+.go-card { display: grid; gap: 16px; }
+.name-input {
+  font: inherit; width: 100%; padding: 11px 14px; border-radius: 12px;
+  border: 2px solid var(--line); background: var(--bg); color: var(--ink);
+}
+.name-input:focus { outline: none; border-color: var(--blue); }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+.toggle { position: relative; }
+.toggle input, .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggle span {
+  display: inline-block; padding: 9px 14px; border-radius: 999px;
+  border: 2px solid var(--line); font-weight: 600; cursor: pointer; user-select: none;
+}
+.toggle input:checked + span { background: var(--blue); border-color: var(--blue); color: #fff; }
+.toggle input:focus-visible + span { outline: 3px solid var(--gold); outline-offset: 2px; }
+.switch { position: relative; display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 500; }
+.switch .track { flex: none; width: 46px; height: 28px; border-radius: 999px; background: var(--line); position: relative; transition: background .2s; }
+.switch .track::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .2s;
+}
+.switch input:checked + .track { background: var(--blue); }
+.switch input:checked + .track::after { transform: translateX(18px); }
+.switch input:focus-visible + .track { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* quiz */
+.quiz {
+  display: grid;
+  grid-template-columns: auto minmax(300px, 400px);
+  grid-template-areas: "pitch q" "pitch fb";
+  grid-template-rows: auto 1fr;
+  gap: 16px 20px;
+  align-items: start;
+  justify-content: center;
+}
+.qcard { grid-area: q; display: grid; gap: 12px; }
+.fbcard { grid-area: fb; }
+.pitch-box {
+  grid-area: pitch;
+  justify-self: center;
+  width: min(100%, calc((100vh - 90px) * 50 / 69.2), 640px);
+  width: min(100%, calc((100dvh - 90px) * 50 / 69.2), 640px);
+}
+#pitch { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: center; font-size: 14px; color: var(--muted); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.lg { display: inline-block; width: 13px; height: 13px; border-radius: 50%; }
+.lg.blue { background: #1d4ed8; border: 2px solid #fff; box-shadow: 0 0 0 1px #94a3b8; }
+.lg.white { background: #fff; border: 2px solid #1f2937; }
+.lg.you { background: #1d4ed8; border: 3px solid #fbbf24; }
+.lg.zone { width: 18px; height: 12px; border-radius: 4px; background: rgba(253, 224, 71, .5); border: 2px dashed #eab308; }
+
+.qtop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.role-pill { font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 999px; background: #1d4ed8; color: #fff; border: 2px solid #fbbf24; white-space: nowrap; }
+.dots { display: flex; gap: 4px; flex: 1; justify-content: center; flex-wrap: wrap; }
+.dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+.dots i.cur { background: transparent; box-shadow: inset 0 0 0 2.5px var(--blue); }
+.dots i.s5 { background: #22c55e; }
+.dots i.s3 { background: #84cc16; }
+.dots i.s1 { background: #f59e0b; }
+.dots i.s0 { background: #ef4444; }
+.starcount { white-space: nowrap; font-weight: 600; }
+.poss { justify-self: start; padding: 7px 14px; border-radius: 999px; font-weight: 700; font-size: 18px; }
+.poss.we { background: #1d4ed8; color: #fff; }
+.poss.they { background: #fff; color: #1f2937; border: 2px solid #94a3b8; }
+.poss.loose { background: #fde047; color: #1f2937; }
+.qline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.qtext { font-size: 26px; font-weight: 700; }
+.step-tag { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+.options { display: grid; gap: 10px; }
+.opt {
+  display: flex; gap: 12px; align-items: center; text-align: left;
+  font: inherit; font-size: 18px; font-weight: 600; line-height: 1.25;
+  padding: 12px 14px; border-radius: 14px; cursor: pointer;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink);
+}
+.opt:hover { border-color: var(--blue); }
+.opt .letter {
+  flex: none; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--blue); color: #fff; font-weight: 700;
+}
+
+.verdict { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.verdict h3 { font-size: 24px; }
+.vscore { font-size: 20px; font-weight: 700; white-space: nowrap; }
+.v5 { color: var(--good); }
+.v3 { color: var(--close); }
+.v1 { color: var(--ok); }
+.v0 { color: var(--bad); }
+.res-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; }
+.res-row.good { background: var(--good-soft); }
+.res-row.meh { background: var(--ok-soft); }
+.res-row.bad { background: var(--bad-soft); }
+.res-ico { font-size: 22px; line-height: 1.2; }
+.res-head { font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.res-text { font-size: 17px; font-weight: 500; margin-top: 2px; }
+.tip { background: var(--blue-soft); border-radius: 14px; padding: 12px 14px; font-size: 18px; font-weight: 500; }
+.tip + .tip { margin-top: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.coach-select { font: inherit; width: 100%; margin-bottom: 12px; padding: 9px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); }
+
+@media (max-width: 860px) {
+  .setup { grid-template-columns: 1fr; }
+  .quiz { grid-template-columns: minmax(0, 1fr); grid-template-areas: "q" "pitch" "fb"; grid-template-rows: auto; }
+  .pitch-box { width: min(100%, 520px); }
+  .fbcard.pre, .fbcard.act { position: sticky; bottom: 10px; z-index: 5; padding: 10px; }
+  .opt { font-size: 17px; padding: 10px 12px; }
+  .qtext { font-size: 23px; }
+}
+@media (max-width: 480px) {
+  .brand { font-size: 19px; }
+  .logo { width: 34px; height: 34px; font-size: 20px; }
+}
+
+/* results */
+.results { max-width: 560px; margin: 10px auto; text-align: center; }
+.trophy { font-size: 64px; line-height: 1.1; }
+.rstars { font-size: 30px; font-weight: 700; margin: 6px 0; }
+.newbest { display: inline-block; background: #fef3c7; color: #92400e; font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-top: 6px; }
+.rlist { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 16px 0; }
+.rlist span { padding: 5px 10px; border-radius: 12px; background: var(--blue-soft); font-size: 15px; }
+.results .row { justify-content: center; }
+
+/* confetti */
+#confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 50; }
+#confetti i { position: absolute; top: -14px; width: 10px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
+@keyframes fall { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(110vh) rotate(720deg); } }
+
+/* pitch drawing */
+svg text { font-family: inherit; }
+.grass-edge { fill: var(--grass-edge); }
+.stripe-a { fill: var(--grass-a); }
+.stripe-b { fill: var(--grass-b); }
+.lines * { fill: none; stroke: rgba(255, 255, 255, .9); stroke-width: .22; }
+.lines .spot { fill: #fff; stroke: none; }
+.goal { fill: rgba(255, 255, 255, .85); stroke: #fff; stroke-width: .2; }
+.buildout { stroke: #fde68a; stroke-width: .3; stroke-dasharray: 1 .7; }
+.buildout.hot { stroke: #fde047; stroke-width: .5; }
+.pitch-label { fill: rgba(255, 255, 255, .92); font-size: 1.3px; font-weight: 700; letter-spacing: .12px; }
+.pitch-label.side { font-size: 1.15px; }
+.bo-label { fill: #fde68a; font-size: .9px; font-weight: 600; }
+.restrict-lbl { fill: #fff; font-size: 1.2px; font-weight: 700; paint-order: stroke; stroke: rgba(0, 0, 0, .4); stroke-width: .28px; }
+.zone { fill: rgba(253, 224, 71, .4); stroke: #fde047; stroke-width: .32; stroke-dasharray: .9 .5; animation: zonePulse 1.4s ease-in-out infinite; }
+@keyframes zonePulse { 50% { fill: rgba(253, 224, 71, .18); } }
+.zone-team { fill: rgba(147, 197, 253, .2); stroke: rgba(219, 234, 254, .95); stroke-width: .18; stroke-dasharray: .6 .4; }
+.zone-team-lbl { fill: #eff6ff; font-size: .95px; font-weight: 700; paint-order: stroke; stroke: rgba(30, 58, 138, .6); stroke-width: .2px; }
+.ghost { fill: none; stroke: rgba(255, 255, 255, .8); stroke-width: .2; stroke-dasharray: .5 .4; }
+.ghost-lbl { fill: rgba(255, 255, 255, .9); font-size: .9px; font-weight: 600; }
+.trail { stroke: rgba(255, 255, 255, .55); stroke-width: .2; stroke-dasharray: .5 .4; fill: none; }
+.arrow { stroke: #fde047; stroke-width: .38; stroke-dasharray: .8 .5; fill: none; }
+.drag-hint { fill: #fff; font-size: 1px; font-weight: 700; pointer-events: none; }
+.ball-c { fill: #fff; stroke: #111; stroke-width: .12; }
+.ball-p { fill: #111; }
+.pl { transition: opacity .35s ease; }
+.pl.hidden { opacity: 0; }
+.pl .body { stroke-width: .3; }
+.pl.blue .body { fill: #1d4ed8; stroke: #fff; }
+.pl.white .body { fill: #fff; stroke: #1f2937; }
+.pl .lbl { font-size: 1.15px; font-weight: 700; pointer-events: none; }
+.pl.blue .lbl { fill: #fff; }
+.pl.white .lbl { fill: #1f2937; }
+.pl.you .body, .pl.me .body, .pick.sel .body { stroke: #fbbf24; stroke-width: .55; }
+.pl.you .lbl { font-size: .95px; }
+.pl .star { fill: #fbbf24; font-size: 1.5px; pointer-events: none; display: none; }
+.pl.you .star, .pl.me .star { display: block; }
+.pl.you { cursor: grab; }
+.pl.you.locked { cursor: default; }
+.pl.you:focus { outline: none; }
+.pl.you:focus-visible .body { stroke: #fde047; stroke-width: .7; }
+.you-pulse { display: none; fill: none; stroke: #fde047; stroke-width: .3; transform-box: fill-box; transform-origin: center; animation: pulse 1.6s ease-out infinite; }
+.pl.you .you-pulse, .pick.sel .you-pulse { display: block; }
+.pl.you.locked .you-pulse { display: none; }
+@keyframes pulse { 0% { opacity: .9; transform: scale(.65); } 100% { opacity: 0; transform: scale(1.35); } }
+.pick { cursor: pointer; }
+.pick:hover .body { fill: #2563eb; }
+.pick:focus { outline: none; }
+.pick:focus-visible .body { stroke: #fde047; stroke-width: .65; }
+
+@media (prefers-reduced-motion: reduce) {
+  .zone, .you-pulse { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="logo" aria-hidden="true">⚽</span><span>Where Should I Be?</span></div>
+    <div class="top-actions">
+      <button class="btn ghost small" id="voiceBtn" type="button"></button>
+      <button class="btn ghost small" id="homeBtn" type="button" hidden>← Back</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- SETUP -->
+    <section id="setup" class="setup">
+      <div class="card pick-card">
+        <h2>Pick your position</h2>
+        <div class="mini-pitch"><svg id="setupPitch" role="group" aria-label="Pick your position"></svg></div>
+        <p class="role-name" id="roleName"></p>
+        <p class="best" id="roleBest"></p>
+      </div>
+      <div class="card go-card">
+        <input class="name-input" id="nameInput" type="text" maxlength="20" placeholder="Your name" aria-label="Your name (optional)" autocomplete="off">
+        <div class="toggles" role="group" aria-label="What to practice">
+          <label class="toggle"><input type="checkbox" value="gk" checked><span>🥅 Goal kicks</span></label>
+          <label class="toggle"><input type="checkbox" value="open" checked><span>⚡ Open play</span></label>
+          <label class="toggle"><input type="checkbox" value="trans" checked><span>🔄 Transitions</span></label>
+        </div>
+        <label class="switch"><input type="checkbox" id="hardInput"><span class="track"></span><span>Hard mode (hide teammates)</span></label>
+        <button class="btn primary big wide" id="startBtn" type="button">Play ⚽</button>
+        <button class="btn ghost small wide" id="coachBtn" type="button">👀 Coach view</button>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz" class="quiz" hidden>
+      <div class="card qcard">
+        <div class="qtop">
+          <span class="role-pill" id="youRole"></span>
+          <div class="dots" id="qdots" aria-hidden="true"></div>
+          <span class="starcount" id="starBox">⭐ <b id="starTotal">0</b></span>
+        </div>
+        <span class="poss" id="poss"></span>
+        <div>
+          <p class="step-tag" id="stepTag"></p>
+          <div class="qline">
+            <h2 class="qtext" id="qtext" aria-live="polite"></h2>
+            <button class="icon-btn" id="readBtn" type="button" aria-label="Say it again">🔊</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pitch-box">
+        <svg id="pitch" aria-label="Soccer pitch. Drag your YOU dot to where you should be."></svg>
+        <div class="legend">
+          <span><i class="lg blue"></i>Us</span>
+          <span><i class="lg white"></i>Them</span>
+          <span><i class="lg you"></i>You</span>
+          <span><i class="lg zone"></i>Best spot</span>
+        </div>
+      </div>
+
+      <div class="card fbcard" id="fb">
+        <div id="fbPre">
+          <button class="btn primary big wide" id="checkBtn" type="button">That's my spot ✅</button>
+        </div>
+        <div id="fbAct" hidden>
+          <div class="options" id="options" role="group" aria-label="What should you do?"></div>
+        </div>
+        <div id="fbPost" hidden>
+          <div class="verdict"><h3 id="vTitle"></h3><span class="vscore" id="vScore"></span></div>
+          <div class="res-row" id="rowSpot">
+            <span class="res-ico" id="spotIco"></span>
+            <div><p class="res-head" id="spotHead"></p><p class="res-text" id="spotText"></p></div>
+          </div>
+          <div class="res-row" id="rowMove">
+            <span class="res-ico" id="moveIco"></span>
+            <div><p class="res-head" id="moveHead"></p><p class="res-text" id="moveText"></p></div>
+          </div>
+          <div class="row">
+            <button class="btn small" id="showMeBtn" type="button">👀 Show me</button>
+            <button class="btn small" id="teamBtn" type="button">👥 Team</button>
+            <button class="btn small" id="readTipBtn" type="button" aria-label="Say it again">🔊</button>
+          </div>
+          <button class="btn primary big wide" id="nextBtn" type="button">Next ➜</button>
+        </div>
+        <div id="fbCoach" hidden>
+          <select class="coach-select" id="coachRole" aria-label="Position"></select>
+          <p class="tip" id="coachTip"></p>
+          <p class="tip" id="coachAct"></p>
+          <div class="row">
+            <button class="btn" id="coachPrev" type="button" aria-label="Previous situation">←</button>
+            <button class="btn primary" id="coachNext" type="button">Next ➜</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="card results" hidden>
+      <div class="trophy" id="rTrophy">🏆</div>
+      <h2 id="rTitle"></h2>
+      <div id="rBest"></div>
+      <p class="rstars" id="rStars"></p>
+      <div class="rlist" id="rList"></div>
+      <div class="row">
+        <button class="btn primary big" id="againBtn" type="button">Play again ⚽</button>
+        <button class="btn big" id="changeBtn" type="button">New position</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="confetti" aria-hidden="true"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------
+   Pitch geometry (yards). x: 0 = left touchline, 40 = right.
+   y: 0 = OUR goal line, 60 = THEIR goal line. Blue attacks up.
+------------------------------------------------------------------- */
+const W = 40, L = 60;
+const BO_OWN = 21;   // build-out line in our half
+const BO_OPP = 39;   // build-out line in their half
+const BENCH = { x: 43, y: 30 }; // on the sideline at halfway, like a sub waiting to come on
+const NS = 'http://www.w3.org/2000/svg';
+
+const ROLES = ['GK', 'LD', 'RD', 'CM', 'LW', 'RW', 'ST'];
+const INFO = {
+  GK: { name: 'Goalkeeper', side: 0 },
+  LD: { name: 'Left Defender', side: -1 },
+  RD: { name: 'Right Defender', side: 1 },
+  CM: { name: 'Center Mid', side: 0 },
+  LW: { name: 'Left Wing', side: -1 },
+  RW: { name: 'Right Wing', side: 1 },
+  ST: { name: 'Striker', side: 0 },
+};
+const KICKOFF = {
+  GK: { x: 20, y: 3 }, LD: { x: 13, y: 12 }, RD: { x: 27, y: 12 }, CM: { x: 20, y: 19 },
+  LW: { x: 6, y: 25 }, RW: { x: 34, y: 25 }, ST: { x: 20, y: 27.5 },
+};
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const laneOf = x => (x < 14 ? -1 : x > 26 ? 1 : 0); // -1 left, 0 middle, 1 right
+const mirror = p => ({ x: W - p.x, y: L - p.y });
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sentence = s => (/[.!?]$/.test(s) ? s : s + '.');
+const reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('wsib:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('wsib:' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
+};
+
+/* ------------------------------------------------------------------
+   Coaching jobs. Every zone the engine hands out has one job:
+     tip   – where to stand (short)
+     act   – the right next move
+     why   – one-line reason
+     wrong – tempting-but-wrong moves (two are picked per question)
+   Defending and winning the ball back are all about INTENSITY.
+------------------------------------------------------------------- */
+const JOBS = {
+  // ---- we have the ball ----
+  gkHigh: { tip: 'Edge of your box.', act: 'Be ready to rush out and clear any long ball', why: "You're the last line if they kick it over our defenders.", wrong: ['Stand on your goal line and watch', 'Run forward to join the attack'] },
+  gkLow: { tip: 'A few steps off your line.', act: 'Talk to your defenders and be ready for a back-pass', why: 'A keeper who talks helps everyone get it right.', wrong: ['Stand quietly on your goal line', 'Run out to the halfway line'] },
+  defGo: { tip: 'One goes, one stays. You go!', act: 'Push up behind the ball and win any loose ball', why: 'Your partner is covering, so you can join in and keep the pressure on.', wrong: ['Stay back next to your partner', 'Sprint into their box to score'] },
+  defStay: { tip: 'One goes, one stays. You stay.', act: 'Stay back and be ready to stop a counter-attack', why: "If we lose it, you're the one who stops their fast break.", wrong: ['Run forward to join the attack too', 'Chase the ball wherever it goes'] },
+  defPartner: { tip: 'Spread wide on your side.', act: 'Get open so your partner can pass across to you', why: 'Two defenders spread out are much harder to press.', wrong: ['Stand right next to your partner', 'Run up to the halfway line'] },
+  cmShow: { tip: 'Find space in the middle.', act: 'Find space and call for the ball', why: 'Make it easy for our defenders to pass to you.', wrong: ['Hide behind one of their players', 'Run all the way up to their box'] },
+  cmSupport: { tip: 'Get forward next to the ball.', act: "Find space near the ball so you're an easy pass", why: 'Being close means a quick, safe pass.', wrong: ['Stand far away from the play', 'Run back to our box'] },
+  cmEdge: { tip: 'Edge of their box.', act: 'Be ready to shoot or win any ball that pops out', why: 'Loose balls at the edge of the box turn into goals.', wrong: ['Jog back to the halfway line', 'Run into the crowd next to the ball'] },
+  stTarget: { tip: 'Stay high in the middle.', act: 'Stay high and call for the long pass', why: 'You keep their defenders busy and give us a target.', wrong: ['Come all the way back for the ball', 'Stand next to our defender'] },
+  stRun: { tip: 'Furthest forward, level with their last defender.', act: 'Make a run behind their defenders for a through ball', why: 'Runs in behind scare defenders and make chances.', wrong: ['Walk back toward our goal', 'Stand still and wait'] },
+  stBox: { tip: 'In the box, in front of goal.', act: 'Find space in front of goal, ready to shoot', why: 'Strikers score from inside the box.', wrong: ['Run out to the corner flag', 'Stop and watch the ball'] },
+  wingBackPost: { tip: 'Back post!', act: 'Sprint to the back post for the cross', why: 'Crosses and rebounds land at the back post.', wrong: ['Stay out on the touchline', 'Run over to the ball to help'] },
+  wingFar: { tip: 'Wide and high on your side.', act: 'Stay wide, ready for a switch pass', why: "If we switch it, you'll have tons of space.", wrong: ['Run over to where the ball is', 'Drop back to our box'] },
+  wingBall: { tip: 'Wide and ahead of the ball.', act: "Stay wide and ahead so you're an easy pass up the line", why: 'Width gives the ball carrier a forward pass.', wrong: ['Squeeze into the middle with everyone', 'Stand behind the ball'] },
+  wingWide: { tip: 'Wide and high.', act: 'Stretch them wide and be ready to run forward', why: 'Wide players make space in the middle.', wrong: ['Squeeze into the middle', 'Drop back behind the ball'] },
+
+  // ---- they have the ball ----
+  gkFar: { tip: 'Edge of your box.', act: 'Be ready to rush out and smash away any long ball!', why: "A sweeping keeper wins balls our defenders can't reach.", wrong: ['Stand on your goal line', 'Run out to the halfway line'] },
+  gkNear: { tip: 'Between the ball and the middle of the goal.', act: 'Get set on your toes, ready to save', why: 'Be set before they shoot so you can dive either way.', wrong: ['Stand flat-footed on your line', 'Run out to the halfway line'] },
+  defCover: { tip: 'Behind your partner, toward the middle.', act: 'Cover your partner and pounce if anyone gets past!', why: "If they beat your partner, you're right there to win it.", wrong: ['Run to press the ball too', 'Push up to the halfway line'] },
+  defHigh: { tip: 'Push up toward halfway.', act: 'Push up together and attack every long ball!', why: 'A high line squeezes the space and wins the ball faster.', wrong: ['Drop deep into our box', 'Wait and watch the ball'] },
+  defNear: { tip: 'Goal-side, close to your partner.', act: 'Stay goal-side and jump in to win it on any bad touch!', why: 'Pounce on a bad touch, and never let them get behind you.', wrong: ['Run forward to attack', 'Wait for someone else to win it'] },
+  cmDeep: { tip: 'Top of our box.', act: 'Block every shot and win every loose ball!', why: 'The most dangerous space is right in front of our goal.', wrong: ['Run up to the halfway line', 'Stand and watch'] },
+  cmHigh: { tip: 'Just behind the press, in the middle.', act: 'Step up and steal any pass into the middle!', why: 'When they try to escape the press, you win it.', wrong: ['Drop back into our box', 'Wait for them to come to you'] },
+  cmDef: { tip: 'Middle, between the ball and our goal.', act: 'Shut the middle and tackle anyone who comes through!', why: 'Nobody gets through the middle. Force them wide.', wrong: ['Run up to join the striker', 'Go out to the touchline'] },
+  wingCorner: { tip: 'Corner of our box.', act: 'Sprint back and block the pass into the middle!', why: 'A pass back into the middle is the most dangerous one.', wrong: ['Stay up near halfway', 'Run out to the corner flag'] },
+  wingDouble: { tip: 'Goal-side, next to your defender.', act: 'Sprint back and trap them with your defender. Win it!', why: 'Two on one wins the ball!', wrong: ['Jog back slowly', 'Wait up the pitch for a pass'] },
+  wingHelp: { tip: 'Tuck in and help, goal-side.', act: 'Sprint back NOW and help win the ball!', why: 'Help your teammate win it back fast.', wrong: ['Wait up the pitch', 'Walk back to your spot'] },
+  wingPushUp: { tip: 'Push up on your side.', act: 'Push up and steal the pass out wide!', why: 'If they pass it wide, you pounce and win it.', wrong: ['Drop back to our box', 'Stand and watch'] },
+  wingTuck: { tip: 'Tuck in, level with the ball.', act: 'Tuck in and steal any pass through the middle!', why: "Close the middle so they can't play through us.", wrong: ['Stay out on the touchline', 'Run up to the striker'] },
+  wingFarDef: { tip: 'Tuck in toward the middle.', act: 'Sprint over and help win the ball in the middle!', why: 'The ball is far away, so help where the danger is.', wrong: ['Stay wide and wait', 'Walk back slowly'] },
+  wingFarHigh: { tip: 'Tuck in and push up.', act: 'Tuck in and steal the switch pass!', why: 'If they try to switch it, you steal it.', wrong: ['Run back to our box', 'Stay wide and wait'] },
+  stLow: { tip: 'Near halfway, in the middle.', act: 'Steal any pass back, then burst forward when we win it!', why: "When we win it, you're the first pass for a counter-attack.", wrong: ['Walk around and rest', 'Run all the way back to our box'] },
+  stHigh: { tip: 'Push up in the middle.', act: 'Push up and steal the pass inside!', why: 'Force them wide, where our wingers can trap them.', wrong: ['Walk back to halfway', 'Stand still and rest'] },
+  help: { tip: 'Right next to the ball.', act: 'Sprint in and trap them. Two of you, win it NOW!', why: 'Two players pressing together win the ball back.', wrong: ['Leave it to your teammate', 'Jog back to your spot', 'Block the pass and wait'] },
+  trap: { tip: 'Inside the ball. Trap them!', act: "Cut off the inside and steal it. They're trapped!", why: "Winger plus striker means they're trapped on the touchline!", wrong: ['Wait in the middle and watch', 'Walk back to halfway'] },
+  counter: { tip: 'Swarm the ball with your teammates!', act: "Sprint in and win it back NOW. Don't stop until we have it!", why: 'When an attacker loses it, all three attackers hunt it together!', wrong: ['Block the pass and wait', 'Jog back to your position', 'Let your teammate chase it'] },
+  pressD: { tip: "You're closest: press the ball!", act: "Go get the ball NOW! Stay on your feet and tackle until it's yours!", why: 'The closest player presses right away. No waiting!', wrong: ['Wait for them to come to you', 'Back off toward our goal'] },
+  pressCM: { tip: "It's in the middle: press it!", act: "Get in their face NOW and win the ball! Don't let them turn!", why: 'The middle is your area. Press hard!', wrong: ['Wait for them to come to you', 'Drop back behind our defenders'] },
+  pressW: { tip: "It's on your side: press it!", act: "Sprint at them and take the ball! Don't let them run down the line!", why: 'Ball on your side means you press. Go hard!', wrong: ['Wait for our defender to do it', 'Stay up the pitch for a pass'] },
+  pressST: { tip: "It's in their half: hunt it down!", act: "Hunt the ball down NOW. Don't stop until you win it!", why: 'Pressing high wins the ball close to their goal.', wrong: ['Wait near halfway', 'Let them pass it around'] },
+  loser: { tip: 'Right on the ball, goal-side.', act: "Go get the ball now! Don't give up tackling until you have it!", why: 'Losing it is OK. Giving up is not! Whoever loses it chases hardest.', wrong: ['Put your hands on your head and walk back', 'Jog back to your position', 'Wait for a teammate to win it'] },
+  loserGK: { tip: 'Between the ball and the goal.', act: 'Attack the ball NOW! Block it, smother it, grab it!', why: 'Never give up! Win it back before they can shoot.', wrong: ['Walk back to your goal line', 'Wait for a defender to fix it'] },
+  loose: { tip: "You're closest. Get there first!", act: 'Attack the loose ball! Get there first and win it!', why: 'Loose balls go to whoever wants it more. Make it you!', wrong: ['Wait to see who gets it', 'Let your teammate go for it', 'Back off and stay in your spot'] },
+  looseHelp: { tip: 'Right behind the ball.', act: 'Sprint in! If they get there first, tackle them and win it!', why: 'Two players chasing means we win the loose ball.', wrong: ['Wait to see who gets it', 'Jog back to your spot'] },
+
+  // ---- goal kicks ----
+  ogkD: { tip: 'Split wide to the corner of the box.', act: 'Get open and call for the pass from the keeper', why: 'Their players must wait behind the line, so you have time.', wrong: ['Stand right next to the keeper', 'Run up to the halfway line'] },
+  ogkCM: { tip: 'Middle, in front of our box.', act: 'Get open in the middle and call for the ball', why: "You're the keeper's middle option.", wrong: ['Hide behind their striker', 'Stand in our goal area'] },
+  ogkW: { tip: 'Wide by the touchline.', act: 'Stay wide, ready to get the ball and run', why: "There's lots of space out wide.", wrong: ['Come into the middle to get it', 'Stand in our box'] },
+  ogkST: { tip: 'High and in the middle.', act: 'Stay high to push their defenders back', why: 'That gives your teammates more space.', wrong: ['Come back to get the ball from the keeper', 'Stand out on the touchline'] },
+  tgkGK: { tip: 'Top of your box.', act: 'Be ready to rush out and smash away a long kick!', why: 'Their keeper might kick it long over everyone.', wrong: ['Stand on your goal line', 'Run up to halfway'] },
+  tgkD: { tip: 'Goal-side of their striker.', act: 'Attack any long kick and win it!', why: "Win the long ball and they can't get going.", wrong: ['Push up past their striker', 'Stand and watch the kick'] },
+  tgkCM: { tip: 'Just behind our front three.', act: 'Pounce on any pass into the middle and win it!', why: 'If they play it into the middle, you win it.', wrong: ['Drop back to our box', 'Stand still and watch'] },
+  tgkW: { tip: 'At the line on your side.', act: 'Sprint at their defender the second the keeper passes!', why: 'Pressing right away wins the ball near their goal.', wrong: ['Cross the line early to get closer', 'Wait and watch where it goes'] },
+  tgkST: { tip: 'At the line, in the middle.', act: 'Sprint at the ball the second the keeper passes!', why: 'Pressing right away wins the ball near their goal.', wrong: ['Cross the line early to get closer', 'Walk back to halfway'] },
+};
+const PRESS_JOB = { GK: 'loserGK', LD: 'pressD', RD: 'pressD', CM: 'pressCM', LW: 'pressW', RW: 'pressW', ST: 'pressST' };
+
+const PHASES = {
+  ourGK:   { cat: 'gk',    we: true,  icon: '🥅' },
+  theirGK: { cat: 'gk',    we: false, icon: '🥅' },
+  attack:  { cat: 'open',  we: true,  icon: '⚡' },
+  defend:  { cat: 'open',  we: false, icon: '🛡️' },
+  lost:    { cat: 'trans', we: false, icon: '🔄' },
+  won:     { cat: 'trans', we: true,  icon: '🔄' },
+  loose:   { cat: 'trans', we: null,  icon: '💥' },
+};
+
+/* ---------------- situations ----------------
+   {C} is replaced with "Our <role>" or "You". */
+const SITUATIONS = [
+  { phase: 'ourGK', ball: { x: 16, y: 4 }, text: 'Our goal kick' },
+  { phase: 'ourGK', ball: { x: 20, y: 9 }, text: 'Our keeper has it' },
+  { phase: 'theirGK', ball: { x: 24, y: 56 }, text: 'Their goal kick' },
+  { phase: 'theirGK', ball: { x: 20, y: 51 }, text: 'Their keeper has it' },
+
+  { phase: 'attack', ball: { x: 33, y: 10 }, carrier: 'RD', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 7, y: 15 }, carrier: 'LD', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 20, y: 24 }, carrier: 'CM', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 36, y: 30 }, carrier: 'RW', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 4, y: 40 }, carrier: 'LW', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 16, y: 36 }, carrier: 'CM', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 22, y: 44 }, carrier: 'ST', text: '{C} has it' },
+  { phase: 'attack', ball: { x: 36, y: 52 }, carrier: 'RW', text: '{C} is about to cross' },
+
+  { phase: 'defend', ball: { x: 20, y: 49 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 34, y: 40 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 5, y: 28 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 20, y: 25 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 35, y: 12 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 5, y: 7 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 33, y: 30 }, text: 'Their ball' },
+  { phase: 'defend', ball: { x: 6, y: 52 }, text: 'Their defender is stuck in the corner!' },
+  { phase: 'defend', ball: { x: 30, y: 46 }, text: 'Bad touch by their defender!' },
+  { phase: 'defend', ball: { x: 20, y: 36 }, text: 'Their player is facing their own goal!' },
+
+  // Every position gets a "you got tackled" moment.
+  { phase: 'lost', ball: { x: 15, y: 14 }, carrier: 'GK', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 9, y: 20 }, carrier: 'LD', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 29, y: 27 }, carrier: 'RD', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 18, y: 32 }, carrier: 'CM', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 6, y: 44 }, carrier: 'LW', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 31, y: 47 }, carrier: 'RW', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 22, y: 50 }, carrier: 'ST', text: '{C} got tackled!' },
+  { phase: 'lost', ball: { x: 11, y: 38 }, carrier: 'LD', text: '{C} got tackled up the pitch!' },
+  { phase: 'lost', ball: { x: 30, y: 16 }, carrier: 'RD', text: '{C} had the ball stolen!' },
+  { phase: 'lost', ball: { x: 20, y: 22 }, carrier: 'CM', text: '{C} had the ball stolen!' },
+  { phase: 'lost', ball: { x: 5, y: 30 }, carrier: 'LW', text: '{C} lost the ball!' },
+  { phase: 'lost', ball: { x: 34, y: 36 }, carrier: 'RW', text: '{C} lost the ball!' },
+  { phase: 'lost', ball: { x: 20, y: 34 }, carrier: 'ST', text: '{C} had the ball stolen!' },
+
+  { phase: 'loose', ball: { x: 20, y: 31 }, text: 'Loose ball in the middle!' },
+  { phase: 'loose', ball: { x: 8, y: 40 }, text: 'Loose ball on the left!' },
+  { phase: 'loose', ball: { x: 32, y: 22 }, text: 'Loose ball on the right!' },
+  { phase: 'loose', ball: { x: 17, y: 7 }, text: 'Loose ball in our box!' },
+
+  { phase: 'won', ball: { x: 14, y: 17 }, carrier: 'LD', text: '{C} won it!' },
+  { phase: 'won', ball: { x: 24, y: 27 }, carrier: 'CM', text: '{C} won it!' },
+  { phase: 'won', ball: { x: 34, y: 24 }, carrier: 'RW', text: '{C} won it!' },
+  { phase: 'won', ball: { x: 20, y: 38 }, carrier: 'ST', text: '{C} won it!' },
+];
+
+/* ------------------------------------------------------------------
+   Positioning engine. Each shape returns a zone per role:
+   { x, y, hw, hh, job } where (x, y) is the ideal spot, hw/hh are
+   the half-width/half-height of the "good" zone and job is a JOBS
+   key. An optional `alt` zone is also accepted in hard mode. The same
+   engine drives the white team by mirroring the pitch.
+------------------------------------------------------------------- */
+const GOAL = { x: 20, y: 0 };
+const towardMiddle = x => (x < 20 ? 1 : -1);
+function Z(x, y, hw, hh, job) { return { x: clamp(x, 1, 39), y: clamp(y, 1, 59), hw, hh, job }; }
+function goalSide(b, d) {
+  const dx = GOAL.x - b.x, dy = GOAL.y - b.y, m = Math.hypot(dx, dy) || 1;
+  return { x: b.x + dx / m * d, y: b.y + dy / m * d };
+}
+function pressZone(b, role) { const p = goalSide(b, 3); return Z(p.x, p.y, 3.5, 3.5, PRESS_JOB[role]); }
+
+// Nudge teammates apart so no two zones sit on top of each other.
+function relax(s, fixed) {
+  const MIN = 5;
+  for (let it = 0; it < 4; it++) {
+    for (let i = 0; i < ROLES.length; i++) {
+      for (let j = i + 1; j < ROLES.length; j++) {
+        const ra = ROLES[i], rb = ROLES[j], fa = fixed.has(ra), fb = fixed.has(rb);
+        if (fa && fb) continue;
+        const a = s[ra], b = s[rb];
+        let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+        if (d >= MIN) continue;
+        if (d < 0.01) { dx = 1; dy = 0; d = 1; }
+        const push = MIN - d, ux = dx / d, uy = dy / d;
+        const wa = fa ? 0 : fb ? 1 : 0.5, wb = fb ? 0 : fa ? 1 : 0.5;
+        a.x = clamp(a.x - ux * push * wa, 1, 39); a.y = clamp(a.y - uy * push * wa, 1, 59);
+        b.x = clamp(b.x + ux * push * wb, 1, 39); b.y = clamp(b.y + uy * push * wb, 1, 59);
+      }
+    }
+  }
+  return s;
+}
+
+// Defenders in attack: one goes, one stays.
+const defGoZone = (r, b) => Z(20 + INFO[r].side * 10, clamp(b.y - 6, 16, 42), 6, 6, 'defGo');
+const defStayZone = (r, b) => Z(20 + INFO[r].side * 3 + (b.x - 20) * 0.15, clamp(b.y - 10, 8, 27), 6, 5, 'defStay');
+
+function attackShape(b, carrier) {
+  const s = {}, ln = laneOf(b.x), third = b.y < 20 ? 0 : b.y > 40 ? 2 : 1;
+  const c = 20 + (b.x - 20) * 0.3;
+  s.GK = Z(20 + (b.x - 20) * 0.25, clamp(b.y * 0.4, 4, 16), 5, 4, b.y > 30 ? 'gkHigh' : 'gkLow');
+
+  const defHasBall = carrier === 'LD' || carrier === 'RD';
+  const goSide = ln !== 0 ? ln : (b.x >= 20 ? 1 : -1);
+  const goer = defHasBall ? carrier : (goSide < 0 ? 'LD' : 'RD');
+  for (const r of ['LD', 'RD']) {
+    if (r === goer) s[r] = defGoZone(r, b);
+    else if (defHasBall && b.y < 22) s[r] = Z(20 + INFO[r].side * 8, Math.max(b.y - 4, 5), 6, 5, 'defPartner');
+    else s[r] = defStayZone(r, b);
+  }
+
+  s.CM = b.y < 18
+    ? Z(c, b.y + 9, 6, 5, 'cmShow')
+    : Z(c, clamp(b.y + 2, 14, 46), 6, 5, third === 2 ? 'cmEdge' : 'cmSupport');
+  s.ST = Z(c, clamp(b.y + 14, 38, 54), 6, 5, ['stTarget', 'stRun', 'stBox'][third]);
+  for (const r of ['LW', 'RW']) {
+    const sd = INFO[r].side, wideX = sd < 0 ? 4 : 36;
+    if (ln === -sd && b.y > 38) s[r] = Z(20 + sd * 7, 54, 4.5, 4, 'wingBackPost');
+    else if (ln === -sd) s[r] = Z(wideX, clamp(b.y + 10, 24, 52), 4, 6, 'wingFar');
+    else s[r] = Z(wideX, clamp(b.y + 7, 22, 52), 4, 6, ln === sd ? 'wingBall' : 'wingWide');
+  }
+  const fixed = new Set(['GK']);
+  if (carrier) { s[carrier] = Z(b.x, b.y - 1.3, 3, 3, null); fixed.add(carrier); }
+  relax(s, fixed);
+
+  // Ball in the middle: either defender may go, as long as the other stays.
+  // The partner on the pitch shows which; in hard mode both answers count.
+  if (ln === 0 && !defHasBall) {
+    const stayer = goer === 'LD' ? 'RD' : 'LD';
+    s[goer].alt = defStayZone(goer, b);
+    s[stayer].alt = defGoZone(stayer, b);
+  }
+  return s;
+}
+
+// Who presses the ball first. Aggressive: we press everywhere.
+function defaultPresser(b) {
+  const ln = laneOf(b.x);
+  if (b.y >= 30) return ln === 0 ? 'ST' : ln < 0 ? 'LW' : 'RW';
+  if (ln === 0) return b.y > 12 ? 'CM' : null;
+  if (b.y < 18) return ln < 0 ? 'LD' : 'RD';
+  return ln < 0 ? 'LW' : 'RW';
+}
+
+// Spots around the ball for extra pressers: inside, behind (cut the pass back), outside.
+function helperSlots(b) {
+  const tm = towardMiddle(b.x);
+  return [
+    { x: b.x + tm * 3.2, y: b.y + 0.6 },
+    { x: b.x + tm * 1.2, y: b.y + 3.6 },
+    { x: b.x - tm * 3, y: b.y + 1.5 },
+  ];
+}
+
+// Who joins the counterpress after we lose the ball (or chase a loose ball).
+// If an attacker loses it, the other two attackers swarm it. Otherwise the
+// nearest teammate helps, but one defender always stays back.
+const FRONT = ['LW', 'ST', 'RW'];
+function counterPressers(b, before, lead) {
+  const dist = r => Math.hypot(before[r].x - b.x, before[r].y - b.y);
+  if (FRONT.includes(lead)) return FRONT.filter(r => r !== lead).sort((a, c) => dist(a) - dist(c));
+  const defs = ['LD', 'RD'];
+  const stayer = defs.includes(lead) ? defs.find(r => r !== lead) : defs.slice().sort((a, c) => dist(c) - dist(a))[0];
+  return ROLES.filter(r => r !== 'GK' && r !== lead && r !== stayer).sort((a, c) => dist(a) - dist(c)).slice(0, 1);
+}
+
+// opts: { lead, helpers, helpJob }. Without opts we use the default press:
+// closest player goes, and in their half a wide press gets the striker trapping inside.
+function defendShape(b, opts = {}) {
+  const s = {}, ln = laneOf(b.x), high = b.y >= 30;
+  const def = defaultPresser(b);
+  const lead = opts.lead !== undefined ? opts.lead : def;
+  let helpers = [], helpJob = opts.helpJob || 'help';
+  if (opts.helpers) helpers = opts.helpers.filter(r => r && r !== lead);
+  else if (opts.lead !== undefined) helpers = def && def !== lead ? [def] : [];
+  else if (high && ln !== 0 && lead) { helpers = ['ST']; helpJob = 'trap'; }
+  const pressing = new Set([lead, ...helpers]);
+
+  // Keeper: on the line between ball and goal centre, further out the further away the ball is.
+  const vx = b.x - GOAL.x, vy = b.y - GOAL.y, dist = Math.hypot(vx, vy) || 1, d = clamp(dist * 0.28, 2, 13);
+  s.GK = Z(GOAL.x + vx / dist * d, Math.max(GOAL.y + vy / dist * d, 1.5), 4, 3.5, dist > 30 ? 'gkFar' : 'gkNear');
+
+  const c = clamp(20 + (b.x - 20) * 0.4, 14, 26), lineY = clamp(b.y - 10, 7, 26);
+  for (const r of ['LD', 'RD']) {
+    const sd = INFO[r].side, partner = r === 'LD' ? 'RD' : 'LD';
+    s[r] = pressing.has(partner)
+      ? Z(20 + INFO[partner].side * 2, clamp(b.y - 8, 4, 20), 5, 4.5, 'defCover')
+      : Z(c + sd * 5, lineY, 5.5, 5, high ? 'defHigh' : 'defNear');
+  }
+
+  if (b.y < 14) s.CM = Z(20 + (b.x - 20) * 0.25, 13, 6, 4, 'cmDeep');
+  else if (high) s.CM = Z(20 + (b.x - 20) * 0.4, clamp(b.y - 8, 24, 42), 6, 5, 'cmHigh');
+  else s.CM = Z(20 + (b.x - 20) * 0.3, clamp(b.y - 4, 10, 28), 6, 5, 'cmDef');
+
+  for (const r of ['LW', 'RW']) {
+    const sd = INFO[r].side;
+    if (ln === sd) {
+      if (high) s[r] = Z(b.x - sd * 4, b.y - 4, 5, 5, 'wingHelp');
+      else if (b.y < 14) s[r] = Z(20 + sd * 9, 15, 5, 4.5, 'wingCorner');
+      else if (b.y < 18) s[r] = Z(clamp(b.x + sd * 2.5, 2, 38), b.y - 4, 4.5, 4.5, 'wingDouble');
+      else s[r] = Z(20 + sd * 8, b.y - 4, 5, 5, 'wingHelp');
+    } else if (ln === 0) {
+      s[r] = high
+        ? Z(20 + sd * 10, clamp(b.y - 3, 30, 46), 5, 5, 'wingPushUp')
+        : Z(20 + sd * 9, clamp(b.y - 1, 12, 30), 5, 5, 'wingTuck');
+    } else {
+      s[r] = high
+        ? Z(20 + sd * 7, clamp(b.y - 6, 26, 40), 5, 5, 'wingFarHigh')
+        : Z(20 + sd * 7, clamp(b.y - 2, 12, 30), 5, 5, 'wingFarDef');
+    }
+  }
+
+  s.ST = high
+    ? Z(20 + (b.x - 20) * 0.4, clamp(b.y - 2, 32, 48), 5, 4, 'stHigh')
+    : Z(20 + (b.x - 20) * 0.3, 32, 5, 4, 'stLow');
+
+  const fixed = new Set(['GK']);
+  if (lead) { s[lead] = pressZone(b, lead); fixed.add(lead); }
+  const slots = helperSlots(b);
+  helpers.forEach((r, i) => { s[r] = Z(slots[i].x, slots[i].y, 4, 4, helpJob); fixed.add(r); });
+  return relax(s, fixed);
+}
+
+function ourGoalKickShape() {
+  return {
+    GK: Z(16, 4, 3, 3, null),
+    LD: Z(6, 8, 5, 5, 'ogkD'), RD: Z(34, 8, 5, 5, 'ogkD'),
+    CM: Z(20, 16, 5, 4, 'ogkCM'),
+    LW: Z(4, 27, 4, 6, 'ogkW'), RW: Z(36, 27, 4, 6, 'ogkW'),
+    ST: Z(20, 42, 6, 6, 'ogkST'),
+  };
+}
+function theirGoalKickShape() {
+  return {
+    GK: Z(20, 11, 5, 4, 'tgkGK'),
+    LD: Z(13, 15, 6, 5, 'tgkD'), RD: Z(27, 15, 6, 5, 'tgkD'),
+    CM: Z(20, 31, 6, 4, 'tgkCM'),
+    LW: Z(9.5, 36, 5, 3, 'tgkW'), RW: Z(30.5, 36, 5, 3, 'tgkW'),
+    ST: Z(20, 36, 5, 3, 'tgkST'),
+  };
+}
+
+function nearestRole(shape, b) {
+  let best = null, bd = Infinity;
+  for (const r of ROLES) {
+    if (r === 'GK') continue;
+    const d = Math.hypot(shape[r].x - b.x, shape[r].y - b.y);
+    if (d < bd) { bd = d; best = r; }
+  }
+  return best;
+}
+const pts = (shape, flip) => Object.fromEntries(ROLES.map(r => [r, flip ? mirror(shape[r]) : { x: shape[r].x, y: shape[r].y }]));
+
+// Display only: slide white dots off any blue dot they would sit on top of.
+function separate(white, blue, fixedWhite) {
+  const MIN = 3.4;
+  for (let it = 0; it < 3; it++) {
+    for (const r of ROLES) {
+      if (fixedWhite.has(r)) continue;
+      const w = white[r];
+      for (const k of ROLES) {
+        const b = blue[k];
+        let dx = w.x - b.x, dy = w.y - b.y, d = Math.hypot(dx, dy);
+        if (d >= MIN) continue;
+        if (d < 0.01) { dx = 0; dy = 1; d = 1; }
+        w.x = clamp(w.x + dx / d * (MIN - d), 1, 39);
+        w.y = clamp(w.y + dy / d * (MIN - d), 1, 59);
+      }
+    }
+  }
+}
+
+// Everything needed to draw one situation: target zones, positions
+// for both teams, and for transitions the "before" positions too.
+function buildFrame(sit) {
+  const b = sit.ball, mb = mirror(b), f = { ball: b };
+  switch (sit.phase) {
+    case 'attack': {
+      f.target = attackShape(b, sit.carrier);
+      f.blue = pts(f.target);
+      f.white = pts(defendShape(mb), true);
+      break;
+    }
+    case 'defend': {
+      const wc = nearestRole(attackShape(mb, null), mb);
+      f.target = defendShape(b);
+      f.blue = pts(f.target);
+      f.white = pts(attackShape(mb, wc), true);
+      f.white[wc] = { x: b.x, y: b.y + 1.3 };
+      f.whiteFixed = [wc];
+      break;
+    }
+    case 'ourGK': {
+      f.target = ourGoalKickShape();
+      f.blue = pts(f.target);
+      f.blue.GK = { x: b.x, y: Math.max(b.y - 1.4, 1) };
+      f.white = pts(theirGoalKickShape(), true);
+      break;
+    }
+    case 'theirGK': {
+      f.target = theirGoalKickShape();
+      f.blue = pts(f.target);
+      f.white = pts(ourGoalKickShape(), true);
+      f.white.GK = { x: b.x, y: Math.min(b.y + 1.4, 59) };
+      f.whiteFixed = ['GK'];
+      break;
+    }
+    case 'lost': {
+      const wDef = defendShape(mb), winner = nearestRole(wDef, mb);
+      f.before = { blue: pts(attackShape(b, sit.carrier)), white: pts(wDef, true) };
+      f.before.white[winner] = { x: b.x, y: b.y + 1.3 };
+      f.before.blue[sit.carrier] = { x: b.x + towardMiddle(b.x) * 3.2, y: b.y + 1.2 };
+      const helpers = counterPressers(b, f.before.blue, sit.carrier);
+      f.target = defendShape(b, { lead: sit.carrier, helpers, helpJob: FRONT.includes(sit.carrier) ? 'counter' : 'help' });
+      f.target[sit.carrier].job = sit.carrier === 'GK' ? 'loserGK' : 'loser';
+      f.blue = pts(f.target);
+      f.white = pts(attackShape(mb, winner), true);
+      f.white[winner] = { ...f.before.white[winner] };
+      f.whiteFixed = [winner];
+      break;
+    }
+    case 'won': {
+      const loser = nearestRole(attackShape(mb, null), mb);
+      f.before = { blue: pts(defendShape(b, { lead: sit.carrier })), white: pts(attackShape(mb, loser), true) };
+      f.before.blue[sit.carrier] = { x: b.x, y: b.y - 1.3 };
+      f.before.white[loser] = { x: b.x + towardMiddle(b.x) * 2.4, y: b.y + 1.4 };
+      f.target = attackShape(b, sit.carrier);
+      f.blue = pts(f.target);
+      f.blue[sit.carrier] = { ...f.before.blue[sit.carrier] };
+      f.white = pts(defendShape(mb, { lead: loser }), true);
+      f.whiteFixed = [loser];
+      break;
+    }
+    case 'loose': {
+      // The ball has popped loose: the closest players on both teams go for it.
+      const wDef = defendShape(mb), wNear = nearestRole(wDef, mb);
+      f.before = { blue: pts(attackShape(b, null)), white: pts(wDef, true) };
+      const dist = r => Math.hypot(f.before.blue[r].x - b.x, f.before.blue[r].y - b.y);
+      const lead = ROLES.slice().sort((a, c) => dist(a) - dist(c))[0];
+      f.target = defendShape(b, { lead, helpers: counterPressers(b, f.before.blue, lead), helpJob: 'looseHelp' });
+      f.target[lead] = Z(b.x, b.y - 0.8, 3.5, 3.5, 'loose');
+      f.blue = pts(f.target);
+      f.white = pts(wDef, true);
+      f.white[wNear] = { x: b.x + 0.5, y: b.y + 2.4 };
+      f.whiteFixed = [wNear];
+      break;
+    }
+  }
+  const fixed = new Set(f.whiteFixed || []);
+  separate(f.white, f.blue, fixed);
+  if (f.before) separate(f.before.white, f.before.blue, fixed);
+  return f;
+}
+
+const isTrans = sit => sit.phase === 'lost' || sit.phase === 'won' || sit.phase === 'loose';
+// Does this blue role have the ball in this situation (so we never ask them)?
+const holdsBall = (sit, r) => (sit.phase === 'ourGK' && r === 'GK') || (sit.carrier === r && sit.phase !== 'lost');
+
+function tipFor(sit, role, zone) {
+  const tip = JOBS[zone.job].tip;
+  if (sit.phase === 'lost' && sit.carrier !== role) return 'We lost it, so sprint! ' + tip;
+  if (sit.phase === 'loose' && zone.job !== 'loose') return 'Loose ball! ' + tip;
+  if (sit.phase === 'won') return 'We won it! ' + tip;
+  return tip;
+}
+
+/* ---------------- SVG drawing ---------------- */
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, cls, extra) {
+  const t = el('text', Object.assign({ x, y, class: cls, 'text-anchor': 'middle' }, extra || {}), parent);
+  t.textContent = s;
+  return t;
+}
+const sy = y => L - y; // field y -> svg y
+
+function drawPitch(svg, id) {
+  svg.setAttribute('viewBox', '-4 -4.6 50 69.2');
+  svg.textContent = '';
+  const defs = el('defs', null, svg);
+  const hatch = (name, color) => {
+    const p = el('pattern', { id: id + name, width: 1.8, height: 1.8, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
+    el('rect', { width: 0.8, height: 1.8, fill: color }, p);
+  };
+  hatch('HatchWhite', 'rgba(255,255,255,.28)');
+  hatch('HatchBlue', 'rgba(29,78,216,.5)');
+  const mk = el('marker', { id: id + 'Arrow', viewBox: '0 0 10 10', refX: 6, refY: 5, markerWidth: 3, markerHeight: 3, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#fde047' }, mk);
+
+  el('rect', { x: -4, y: -4.6, width: 50, height: 69.2, rx: 2.4, class: 'grass-edge' }, svg);
+  for (let i = 0; i < 12; i++) el('rect', { x: 0, y: i * 5, width: W, height: 5, class: i % 2 ? 'stripe-a' : 'stripe-b' }, svg);
+  const g = el('g', { class: 'lines' }, svg);
+  el('rect', { x: 0, y: 0, width: W, height: L }, g);
+  el('line', { x1: 0, y1: L / 2, x2: W, y2: L / 2 }, g);
+  el('circle', { cx: 20, cy: 30, r: 6 }, g);
+  el('rect', { x: 8, y: 0, width: 24, height: 12 }, g);
+  el('rect', { x: 8, y: 48, width: 24, height: 12 }, g);
+  el('rect', { x: 14, y: 0, width: 12, height: 4 }, g);
+  el('rect', { x: 14, y: 56, width: 12, height: 4 }, g);
+  for (const [cx, cy] of [[20, 30], [20, 8], [20, 52]]) el('circle', { cx, cy, r: 0.3, class: 'spot' }, g);
+  el('rect', { x: 17, y: -1.5, width: 6, height: 1.5, class: 'goal' }, svg);
+  el('rect', { x: 17, y: L, width: 6, height: 1.5, class: 'goal' }, svg);
+
+  const restrict = el('g', null, svg);
+  const boOpp = el('line', { x1: 0, y1: sy(BO_OPP), x2: W, y2: sy(BO_OPP), class: 'buildout' }, svg);
+  const boOwn = el('line', { x1: 0, y1: sy(BO_OWN), x2: W, y2: sy(BO_OWN), class: 'buildout' }, svg);
+  txt(svg, 0.5, sy(BO_OPP) - 0.45, 'build-out line', 'bo-label', { 'text-anchor': 'start' });
+  txt(svg, 0.5, sy(BO_OWN) - 0.45, 'build-out line', 'bo-label', { 'text-anchor': 'start' });
+  txt(svg, 20, -2.4, 'THEIR GOAL', 'pitch-label');
+  txt(svg, 20, L + 3.3, 'OUR GOAL', 'pitch-label');
+  txt(svg, -2, 30, 'WE ATTACK →', 'pitch-label side', { transform: 'rotate(-90 -2 30)', 'dominant-baseline': 'central' });
+
+  const layers = { restrict };
+  for (const k of ['zones', 'arrows', 'players', 'you']) layers[k] = el('g', null, svg);
+  return { layers, boOpp, boOwn, id };
+}
+
+function makePlayer(layer, team, label, you) {
+  const g = el('g', { class: 'pl ' + team + (you ? ' you' : '') }, layer);
+  el('circle', { r: 2.5, class: 'you-pulse' }, g);
+  el('circle', { r: 1.6, class: 'body' }, g);
+  if (label) txt(g, 0, 0.05, label, 'lbl', { 'dominant-baseline': 'central' });
+  txt(g, 0, -2.3, '★', 'star', { 'dominant-baseline': 'central' });
+  return g;
+}
+function place(g, p) { g.setAttribute('transform', `translate(${p.x.toFixed(2)} ${sy(p.y).toFixed(2)})`); }
+function makeBall(layer) {
+  const g = el('g', { class: 'ball' }, layer);
+  el('circle', { r: 0.85, class: 'ball-c' }, g);
+  const pts5 = [];
+  for (let k = 0; k < 5; k++) {
+    const a = (-90 + 72 * k) * Math.PI / 180;
+    pts5.push((0.38 * Math.cos(a)).toFixed(3) + ',' + (0.38 * Math.sin(a)).toFixed(3));
+  }
+  el('polygon', { points: pts5.join(' '), class: 'ball-p' }, g);
+  return g;
+}
+function zoneRect(z) {
+  return { x1: Math.max(0, z.x - z.hw), x2: Math.min(W, z.x + z.hw), y1: Math.max(0, z.y - z.hh), y2: Math.min(L, z.y + z.hh) };
+}
+function drawZone(layer, z, cls, before) {
+  const r = zoneRect(z);
+  const rect = el('rect', { x: r.x1, y: sy(r.y2), width: r.x2 - r.x1, height: r.y2 - r.y1, rx: 1.4, class: cls });
+  layer.insertBefore(rect, before || null);
+  return rect;
+}
+function distToZone(p, z) {
+  const r = zoneRect(z);
+  return Math.hypot(Math.max(r.x1 - p.x, 0, p.x - r.x2), Math.max(r.y1 - p.y, 0, p.y - r.y2));
+}
+function drawRestriction(P, phase) {
+  const lay = P.layers.restrict;
+  P.boOwn.classList.toggle('hot', phase === 'ourGK');
+  P.boOpp.classList.toggle('hot', phase === 'theirGK');
+  if (phase === 'ourGK') {
+    el('rect', { x: 0, y: sy(BO_OWN), width: W, height: BO_OWN, fill: `url(#${P.id}HatchWhite)` }, lay);
+    txt(lay, 20, sy(BO_OWN) + 1.7, 'No white shirts yet!', 'restrict-lbl');
+  } else if (phase === 'theirGK') {
+    el('rect', { x: 0, y: 0, width: W, height: sy(BO_OPP), fill: `url(#${P.id}HatchBlue)` }, lay);
+    txt(lay, 20, sy(BO_OPP) - 1.1, 'No blue shirts yet!', 'restrict-lbl');
+  }
+}
+function animateMoves(moves, dur) {
+  if (reduceMotion) { moves.forEach(m => place(m.g, m.to)); return; }
+  const t0 = performance.now();
+  const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = ease(t);
+    for (const m of moves) place(m.g, { x: m.from.x + (m.to.x - m.from.x) * e, y: m.from.y + (m.to.y - m.from.y) * e });
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ---------------- voice ----------------
+   Questions and results are read out automatically (toggle in the header).
+   Speech always starts from a tap, which browsers require. */
+const canSpeak = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+const voice = { on: store.get('voice', true), pick: null };
+function pickVoice() {
+  try {
+    const score = v => (/natural|neural|premium|enhanced/i.test(v.name) ? 4 : 0)
+      + (/samantha|aria|jenny|ava|allison|google us english/i.test(v.name) ? 3 : 0)
+      + (/^en[-_]US/i.test(v.lang) ? 1 : 0);
+    voice.pick = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)).sort((a, b) => score(b) - score(a))[0] || null;
+  } catch (e) { voice.pick = null; }
+}
+if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text, force) {
+  if (!canSpeak || !text || (!voice.on && !force)) return;
+  try {
+    speechSynthesis.cancel();
+    const clean = text.replace(/[^\p{L}\p{N}\p{P}\s]/gu, '').replace(/\s+/g, ' ').trim();
+    // Short chunks: some browsers cut off long utterances.
+    for (const part of clean.match(/[^.!?]+[.!?]*/g) || []) {
+      const u = new SpeechSynthesisUtterance(part.trim());
+      if (voice.pick) u.voice = voice.pick;
+      u.rate = 0.95;
+      u.pitch = 1.05;
+      speechSynthesis.speak(u);
+    }
+  } catch (e) { /* speech unavailable */ }
+}
+function hush() { if (canSpeak) try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } }
+function renderVoiceBtn() {
+  const b = $('#voiceBtn');
+  b.hidden = !canSpeak;
+  b.textContent = voice.on ? '🔊 Voice' : '🔇 Voice';
+  b.setAttribute('aria-pressed', String(voice.on));
+  b.setAttribute('aria-label', voice.on ? 'Voice is on' : 'Voice is off');
+}
+
+/* ---------------- confetti ---------------- */
+function confetti(n) {
+  if (reduceMotion) return;
+  const box = $('#confetti'), colors = ['#1d4ed8', '#fbbf24', '#22c55e', '#ef4444', '#a855f7', '#38bdf8'];
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('i');
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = pick(colors);
+    c.style.animationDuration = (1.6 + Math.random() * 1.6) + 's';
+    c.style.animationDelay = Math.random() * 0.4 + 's';
+    box.appendChild(c);
+    setTimeout(() => c.remove(), 3800);
+  }
+}
+
+/* ---------------- state ---------------- */
+const SPOT_MAX = 3, MOVE_POINTS = 2, Q_MAX = SPOT_MAX + MOVE_POINTS;
+const state = {
+  role: store.get('role', 'RD'),
+  name: store.get('name', ''),
+  phases: store.get('phases', ['gk', 'open', 'trans']),
+  hard: store.get('hard', false),
+  round: [], i: 0, stars: 0, step: 'place', moved: false,
+  coach: false, ci: 0,
+};
+if (!ROLES.includes(state.role)) state.role = 'RD';
+if (!Array.isArray(state.phases) || !state.phases.length) state.phases = ['gk', 'open', 'trans'];
+
+function show(screen) {
+  for (const id of ['setup', 'quiz', 'results']) $('#' + id).hidden = id !== screen;
+  $('#homeBtn').hidden = screen === 'setup';
+  window.scrollTo(0, 0);
+}
+
+/* ---------------- setup screen ---------------- */
+const S = {};
+function initSetup() {
+  const P = drawPitch($('#setupPitch'), 's');
+  S.picks = {};
+  for (const r of ROLES) {
+    const g = makePlayer(P.layers.players, 'blue', r);
+    g.classList.add('pick');
+    g.setAttribute('tabindex', '0');
+    g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', INFO[r].name);
+    place(g, KICKOFF[r]);
+    g.addEventListener('click', () => selectRole(r));
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRole(r); } });
+    S.picks[r] = g;
+  }
+  const nameInput = $('#nameInput');
+  nameInput.value = state.name;
+  nameInput.addEventListener('input', () => { state.name = nameInput.value.trim(); store.set('name', state.name); });
+  document.querySelectorAll('.toggles input').forEach(inp => {
+    inp.checked = state.phases.includes(inp.value);
+    inp.addEventListener('change', () => {
+      const on = [...document.querySelectorAll('.toggles input:checked')].map(i => i.value);
+      if (!on.length) { inp.checked = true; return; }
+      state.phases = on;
+      store.set('phases', on);
+    });
+  });
+  const hard = $('#hardInput');
+  hard.checked = !!state.hard;
+  hard.addEventListener('change', () => { state.hard = hard.checked; store.set('hard', state.hard); });
+  $('#startBtn').addEventListener('click', startRound);
+  $('#coachBtn').addEventListener('click', startCoach);
+  $('#voiceBtn').addEventListener('click', () => {
+    voice.on = !voice.on;
+    store.set('voice', voice.on);
+    renderVoiceBtn();
+    if (voice.on) speak('Voice on!'); else hush();
+  });
+  renderVoiceBtn();
+  selectRole(state.role);
+}
+function selectRole(r) {
+  state.role = r;
+  store.set('role', r);
+  for (const k of ROLES) {
+    S.picks[k].classList.toggle('sel', k === r);
+    S.picks[k].setAttribute('aria-pressed', String(k === r));
+  }
+  S.picks[r].parentNode.appendChild(S.picks[r]);
+  $('#roleName').textContent = INFO[r].name;
+  const best = store.get('best:' + r, null);
+  $('#roleBest').textContent = best ? `Best: ${best.stars} of ${best.max} ⭐` : '';
+}
+
+/* ---------------- quiz ---------------- */
+const Q = {};
+const cur = () => state.round[state.i];
+
+function buildRound() {
+  const pools = { gk: [], open: [], trans: [] };
+  for (const sit of SITUATIONS) {
+    const cat = PHASES[sit.phase].cat;
+    if (!state.phases.includes(cat) || holdsBall(sit, state.role)) continue;
+    pools[cat].push(sit);
+  }
+  Object.values(pools).forEach(shuffle);
+  // Always include "you got tackled" for this position.
+  const mine = pools.trans.findIndex(s => s.phase === 'lost' && s.carrier === state.role);
+  if (mine > 0) pools.trans.unshift(pools.trans.splice(mine, 1)[0]);
+
+  const N = 10, weights = { gk: 2, open: 4, trans: 4 };
+  const cats = state.phases.filter(c => pools[c].length);
+  const totalW = cats.reduce((a, c) => a + weights[c], 0);
+  const quota = {};
+  cats.forEach(c => { quota[c] = Math.min(pools[c].length, Math.round(N * weights[c] / totalW)); });
+  const count = () => cats.reduce((a, c) => a + quota[c], 0);
+  while (count() < N) {
+    const open = cats.filter(c => quota[c] < pools[c].length).sort((a, b) => quota[a] / weights[a] - quota[b] / weights[b]);
+    if (!open.length) break;
+    quota[open[0]]++;
+  }
+  while (count() > N) quota[cats.slice().sort((a, b) => quota[b] - quota[a])[0]]--;
+  const picked = [];
+  cats.forEach(c => picked.push(...pools[c].slice(0, quota[c])));
+  return shuffle(picked).map(sit => ({
+    sit, role: state.role, frame: buildFrame(sit), trans: isTrans(sit), stars: null,
+  }));
+}
+
+function startRound() {
+  hush();
+  state.coach = false;
+  state.round = buildRound();
+  state.i = 0;
+  state.stars = 0;
+  show('quiz');
+  renderQuestion();
+}
+
+function svgPt(e) {
+  const m = Q.svg.getScreenCTM();
+  if (!m) return null;
+  const pt = Q.svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const p = pt.matrixTransform(m.inverse());
+  return { x: p.x, y: L - p.y };
+}
+function moveYou(p) {
+  if (!p) return;
+  Q.youPos = { x: clamp(p.x, -2.4, 44.4), y: clamp(p.y, -3, L + 3) };
+  place(Q.you, Q.youPos);
+  if (!state.moved) {
+    state.moved = true;
+    if (Q.benchHint) Q.benchHint.remove();
+    $('#checkBtn').disabled = false;
+  }
+}
+function onDown(e) {
+  if (state.coach || state.step !== 'place' || !cur()) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+  const p = svgPt(e);
+  if (!p) return;
+  Q.dragging = true;
+  try { Q.svg.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  if (Q.you.contains(e.target)) Q.off = { x: Q.youPos.x - p.x, y: Q.youPos.y - p.y };
+  else { Q.off = { x: 0, y: 0 }; moveYou(p); }
+}
+function onMove(e) {
+  if (!Q.dragging) return;
+  e.preventDefault();
+  const p = svgPt(e);
+  if (p) moveYou({ x: p.x + Q.off.x, y: p.y + Q.off.y });
+}
+function onUp(e) {
+  if (!Q.dragging) return;
+  Q.dragging = false;
+  try { Q.svg.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+}
+function onYouKey(e) {
+  if (state.step !== 'place' || state.coach) return;
+  const step = e.shiftKey ? 3 : 1;
+  let p = { ...Q.youPos };
+  if (!state.moved && !cur().trans && e.key.startsWith('Arrow')) p = { x: 20, y: 30 };
+  else if (e.key === 'ArrowUp') p.y += step;
+  else if (e.key === 'ArrowDown') p.y -= step;
+  else if (e.key === 'ArrowLeft') p.x -= step;
+  else if (e.key === 'ArrowRight') p.x += step;
+  else if (e.key === 'Enter') { e.preventDefault(); if (state.moved) lockSpot(); return; }
+  else return;
+  e.preventDefault();
+  moveYou(p);
+}
+
+function initQuiz() {
+  Q.svg = $('#pitch');
+  Q.P = drawPitch(Q.svg, 'q');
+  Q.svg.addEventListener('pointerdown', onDown);
+  Q.svg.addEventListener('pointermove', onMove);
+  Q.svg.addEventListener('pointerup', onUp);
+  Q.svg.addEventListener('pointercancel', onUp);
+  $('#checkBtn').addEventListener('click', lockSpot);
+  $('#nextBtn').addEventListener('click', next);
+  $('#showMeBtn').addEventListener('click', showMe);
+  $('#teamBtn').addEventListener('click', toggleTeam);
+  $('#readBtn').addEventListener('click', () => speak(Q.say, true));
+  $('#readTipBtn').addEventListener('click', () => speak(Q.sayResult, true));
+  $('#homeBtn').addEventListener('click', () => { hush(); show('setup'); });
+  $('#againBtn').addEventListener('click', startRound);
+  $('#changeBtn').addEventListener('click', () => { hush(); show('setup'); });
+  $('#coachPrev').addEventListener('click', () => { state.ci = (state.ci - 1 + SITUATIONS.length) % SITUATIONS.length; renderCoach(); });
+  $('#coachNext').addEventListener('click', () => { state.ci = (state.ci + 1) % SITUATIONS.length; renderCoach(); });
+  const sel = $('#coachRole');
+  for (const r of ROLES) { const o = document.createElement('option'); o.value = r; o.textContent = INFO[r].name; sel.appendChild(o); }
+  sel.addEventListener('change', () => { selectRole(sel.value); renderCoach(); });
+}
+
+function clearPitch() {
+  const Ls = Q.P.layers;
+  for (const k in Ls) Ls[k].textContent = '';
+  Q.teamZones = null;
+  Q.arrow = null;
+  Q.zone = null;
+}
+function situationText(sit, role) {
+  const C = sit.carrier ? (sit.carrier === role ? 'You' : 'Our ' + INFO[sit.carrier].name) : '';
+  return sit.text.replace('{C}', C);
+}
+function setSituation(sit, role) {
+  const we = PHASES[sit.phase].we, poss = $('#poss');
+  poss.className = 'poss ' + (we === null ? 'loose' : we ? 'we' : 'they');
+  poss.textContent = (we === null ? '🟡 ' : we ? '🔵 ' : '⚪ ') + situationText(sit, role);
+}
+function renderDots() {
+  const box = $('#qdots');
+  box.textContent = '';
+  state.round.forEach((q, i) => {
+    const d = document.createElement('i');
+    if (q.stars != null) d.className = 's' + (q.stars >= 5 ? 5 : q.stars >= 3 ? 3 : q.stars >= 1 ? 1 : 0);
+    else if (i === state.i) d.className = 'cur';
+    box.appendChild(d);
+  });
+}
+function showPanel(which) {
+  $('#fbPre').hidden = which !== 'pre';
+  $('#fbAct').hidden = which !== 'act';
+  $('#fbPost').hidden = which !== 'post';
+  $('#fbCoach').hidden = which !== 'coach';
+  $('#fb').classList.toggle('pre', which === 'pre');
+  $('#fb').classList.toggle('act', which === 'act');
+}
+function setPrompt(tag, text, say) {
+  $('#stepTag').textContent = tag;
+  $('#qtext').textContent = text;
+  Q.say = say;
+  speak(say);
+}
+
+// Step 1: where should you be?
+function renderQuestion() {
+  const q = cur(), f = q.frame, sit = q.sit, Ls = Q.P.layers;
+  state.step = 'place';
+  state.moved = q.trans;
+  clearPitch();
+  drawRestriction(Q.P, sit.phase);
+
+  const pos = q.trans ? f.before : f;
+  Q.els = { blue: {}, white: {} };
+  for (const r of ROLES) {
+    const g = makePlayer(Ls.players, 'white', r === 'GK' ? 'GK' : '');
+    place(g, pos.white[r]);
+    Q.els.white[r] = g;
+  }
+  for (const r of ROLES) {
+    if (r === q.role) continue;
+    const g = makePlayer(Ls.players, 'blue', r);
+    place(g, pos.blue[r]);
+    if (state.hard && !holdsBall(sit, r) && !(sit.phase === 'lost' && sit.carrier === r)) g.classList.add('hidden');
+    Q.els.blue[r] = g;
+  }
+  place(makeBall(Ls.players), f.ball);
+
+  if (q.trans) {
+    const s = pos.blue[q.role];
+    el('circle', { cx: s.x, cy: sy(s.y), r: 1.6, class: 'ghost' }, Ls.arrows);
+    txt(Ls.arrows, s.x, sy(s.y) + 2.6, 'you were here', 'ghost-lbl');
+  }
+  Q.you = makePlayer(Ls.you, 'blue', 'YOU', true);
+  Q.you.setAttribute('tabindex', '0');
+  Q.you.setAttribute('role', 'button');
+  Q.you.setAttribute('aria-label', 'Your player. Drag it, or use the arrow keys, then press Enter.');
+  Q.you.addEventListener('keydown', onYouKey);
+  Q.youPos = q.trans ? { ...pos.blue[q.role] } : { ...BENCH };
+  place(Q.you, Q.youPos);
+  Q.benchHint = q.trans ? null : txt(Ls.you, BENCH.x, sy(BENCH.y) + 3, 'drag me!', 'drag-hint');
+
+  setSituation(sit, q.role);
+  $('#youRole').textContent = INFO[q.role].name;
+  $('#starBox').hidden = false;
+  $('#qdots').hidden = false;
+  $('#readBtn').hidden = !canSpeak;
+  $('#starTotal').textContent = state.stars;
+  showPanel('pre');
+  $('#checkBtn').disabled = !state.moved;
+  renderDots();
+
+  const ask = q.trans ? 'Where do you go?' : 'Where should you be?';
+  const who = (state.name ? state.name + ', you' : 'You') + `'re the ${INFO[q.role].name}.`;
+  setPrompt('1. Your spot', ask, `${who} ${sentence(situationText(sit, q.role))} ${ask}`);
+}
+
+// Step 2: what should you do? (Nothing is revealed until this is answered.)
+function lockSpot() {
+  const q = cur();
+  if (!q || state.step !== 'place' || !state.moved) return;
+  state.step = 'act';
+  Q.dragging = false;
+  Q.you.classList.add('locked');
+
+  const p = Q.youPos;
+  let z = q.frame.target[q.role], d = distToZone(p, z);
+  if (state.hard && z.alt) {
+    const da = distToZone(p, z.alt);
+    if (da < d) { z = z.alt; d = da; }
+  }
+  const off = p.x < 0 || p.x > W || p.y < 0 || p.y > L;
+  const crossed = q.sit.phase === 'theirGK' && p.y > BO_OPP;
+  let spot = d === 0 ? 3 : d <= 4 ? 2 : d <= 8 ? 1 : 0;
+  if (off || crossed) spot = 0;
+  q.zone = z;
+  q.spot = { stars: spot, off, crossed };
+
+  const job = JOBS[z.job];
+  q.options = shuffle([{ text: job.act, ok: true }, ...shuffle(job.wrong.slice()).slice(0, 2).map(t => ({ text: t, ok: false }))]);
+  const box = $('#options');
+  box.textContent = '';
+  q.options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opt';
+    const letter = document.createElement('span');
+    letter.className = 'letter';
+    letter.textContent = 'ABC'[i];
+    const label = document.createElement('span');
+    label.textContent = o.text;
+    b.append(letter, label);
+    b.addEventListener('click', () => answer(i));
+    box.appendChild(b);
+  });
+  showPanel('act');
+  const say = 'What should you do? ' + q.options.map((o, i) => `${'ABC'[i]}: ${sentence(o.text)}`).join(' ');
+  setPrompt('2. Your move', 'What should you do?', say);
+  box.querySelector('.opt').focus({ preventScroll: true });
+}
+
+// Step 3: score both answers, reveal, and explain.
+function answer(i) {
+  const q = cur();
+  if (!q || state.step !== 'act') return;
+  state.step = 'done';
+  const f = q.frame, sit = q.sit, z = q.zone, job = JOBS[z.job], p = Q.youPos;
+  const moveOk = q.options[i].ok;
+  const total = q.spot.stars + (moveOk ? MOVE_POINTS : 0);
+  q.stars = total;
+  state.stars += total;
+
+  const Ls = Q.P.layers;
+  Q.zone = drawZone(Ls.zones, z, 'zone');
+  Ls.players.querySelectorAll('.hidden').forEach(g => g.classList.remove('hidden'));
+  if (q.trans) {
+    const moves = [];
+    for (const r of ROLES) {
+      if (r !== q.role) moves.push({ g: Q.els.blue[r], from: f.before.blue[r], to: f.blue[r] });
+      moves.push({ g: Q.els.white[r], from: f.before.white[r], to: f.white[r] });
+    }
+    animateMoves(moves, 1200);
+  }
+  if (q.spot.stars < 3) drawArrow(p, z);
+
+  const title = total === Q_MAX ? 'Perfect! 🎉' : total >= 4 ? 'Great job! 👍' : total >= 2 ? 'Getting there 🙂' : 'Not quite 👀';
+  const tip = tipFor(sit, q.role, z);
+  const s = q.spot.stars;
+  const spotWord = q.spot.off ? "That's off the pitch!" : q.spot.crossed ? 'Too far! Wait behind the line until the kick.' : ['Not quite.', 'Getting there.', 'Close!', 'Spot on!'][s];
+  const spotText = `${spotWord} ${tip}`;
+  const moveText = moveOk ? `Right! ${job.why}` : `Best move: ${sentence(job.act)} ${job.why}`;
+
+  const vt = $('#vTitle');
+  vt.textContent = title;
+  vt.className = 'v' + (total >= 5 ? 5 : total >= 3 ? 3 : total >= 1 ? 1 : 0);
+  $('#vScore').textContent = `⭐ ${total}/${Q_MAX}`;
+  $('#rowSpot').className = 'res-row ' + (s === 3 ? 'good' : s > 0 ? 'meh' : 'bad');
+  $('#spotIco').textContent = s === 3 ? '✅' : s > 0 ? '🟡' : '❌';
+  $('#spotHead').textContent = `Your spot ${'⭐'.repeat(s)}`;
+  $('#spotText').textContent = spotText;
+  $('#rowMove').className = 'res-row ' + (moveOk ? 'good' : 'bad');
+  $('#moveIco').textContent = moveOk ? '✅' : '❌';
+  $('#moveHead').textContent = `Your move ${moveOk ? '⭐⭐' : ''}`;
+  $('#moveText').textContent = moveText;
+  $('#showMeBtn').hidden = s === 3;
+  $('#teamBtn').textContent = '👥 Team';
+  $('#nextBtn').textContent = state.i + 1 < state.round.length ? 'Next ➜' : 'Score 🏆';
+  $('#starTotal').textContent = state.stars;
+  showPanel('post');
+  renderDots();
+
+  Q.sayResult = `${title} Your spot: ${spotText} Your move: ${moveText}`;
+  speak(Q.sayResult);
+  if (total === Q_MAX) confetti(40);
+  $('#nextBtn').focus({ preventScroll: true });
+}
+
+function drawArrow(from, z) {
+  if (Q.arrow) Q.arrow.remove();
+  const dx = z.x - from.x, dy = z.y - from.y, len = Math.hypot(dx, dy);
+  if (len < 2.5) return;
+  const s = 1.9 / len;
+  Q.arrow = el('line', {
+    x1: from.x + dx * s, y1: sy(from.y + dy * s), x2: z.x, y2: sy(z.y),
+    class: 'arrow', 'marker-end': `url(#${Q.P.id}Arrow)`,
+  }, Q.P.layers.arrows);
+}
+function showMe() {
+  const z = cur().zone;
+  if (Q.arrow) { Q.arrow.remove(); Q.arrow = null; }
+  animateMoves([{ g: Q.you, from: { ...Q.youPos }, to: { x: z.x, y: z.y } }], 700);
+  Q.youPos = { x: z.x, y: z.y };
+}
+function drawTeamZones(sit, frame, me) {
+  const Ls = Q.P.layers, group = el('g', null);
+  Ls.zones.insertBefore(group, Ls.zones.firstChild);
+  for (const r of ROLES) {
+    if (r === me || holdsBall(sit, r)) continue;
+    const z = frame.target[r], rr = zoneRect(z);
+    drawZone(group, z, 'zone-team');
+    txt(group, rr.x1 + 0.4, sy(rr.y2) + 1.1, r, 'zone-team-lbl', { 'text-anchor': 'start' });
+  }
+  return group;
+}
+function toggleTeam() {
+  const q = cur();
+  if (Q.teamZones) { Q.teamZones.remove(); Q.teamZones = null; $('#teamBtn').textContent = '👥 Team'; return; }
+  Q.teamZones = drawTeamZones(q.sit, q.frame, q.role);
+  $('#teamBtn').textContent = '👥 Hide';
+}
+function next() {
+  hush();
+  state.i++;
+  if (state.i >= state.round.length) showResults();
+  else {
+    renderQuestion();
+    if (window.innerWidth <= 860) $('#quiz').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }
+}
+
+/* ---------------- results ---------------- */
+function showResults() {
+  const max = state.round.length * Q_MAX, pct = max ? state.stars / max : 0;
+  const key = 'best:' + state.role, best = store.get(key, null);
+  const newBest = !best || pct > best.stars / best.max;
+  if (newBest) store.set(key, { stars: state.stars, max });
+  const title = pct >= 0.9 ? 'Superstar!' : pct >= 0.7 ? 'Great job!' : pct >= 0.4 ? 'Good effort!' : 'Keep practicing!';
+  $('#rTrophy').textContent = pct >= 0.9 ? '🏆' : pct >= 0.7 ? '🥇' : pct >= 0.4 ? '👍' : '⚽';
+  $('#rTitle').textContent = title;
+  $('#rBest').innerHTML = newBest && best ? '<span class="newbest">New best! 🎉</span>' : '';
+  $('#rStars').textContent = `⭐ ${state.stars} of ${max}`;
+  const list = $('#rList');
+  list.textContent = '';
+  state.round.forEach(q => {
+    const s = document.createElement('span');
+    s.textContent = `${PHASES[q.sit.phase].icon} ${q.stars || 0}/${Q_MAX}`;
+    list.appendChild(s);
+  });
+  selectRole(state.role);
+  show('results');
+  speak(`${title} You got ${state.stars} out of ${max} stars.${newBest && best ? ' That is a new best!' : ''}`);
+  if (pct >= 0.7) confetti(120);
+}
+
+/* ---------------- coach view ---------------- */
+function startCoach() {
+  hush();
+  state.coach = true;
+  state.ci = 0;
+  $('#coachRole').value = state.role;
+  show('quiz');
+  renderCoach();
+}
+function renderCoach() {
+  const sit = SITUATIONS[state.ci], f = buildFrame(sit), Ls = Q.P.layers, role = state.role;
+  clearPitch();
+  drawRestriction(Q.P, sit.phase);
+  const iHoldIt = holdsBall(sit, role);
+  if (!iHoldIt) Q.zone = drawZone(Ls.zones, f.target[role], 'zone');
+  Q.teamZones = drawTeamZones(sit, f, role);
+  if (f.before) {
+    for (const r of ROLES) {
+      const a = f.before.blue[r], b = f.blue[r];
+      if (Math.hypot(b.x - a.x, b.y - a.y) < 1) continue;
+      el('line', { x1: a.x, y1: sy(a.y), x2: b.x, y2: sy(b.y), class: 'trail' }, Ls.arrows);
+      el('circle', { cx: a.x, cy: sy(a.y), r: 0.6, class: 'ghost' }, Ls.arrows);
+    }
+  }
+  for (const r of ROLES) place(makePlayer(Ls.players, 'white', r === 'GK' ? 'GK' : ''), f.white[r]);
+  for (const r of ROLES) {
+    const g = makePlayer(r === role ? Ls.you : Ls.players, 'blue', r);
+    if (r === role) g.classList.add('me');
+    place(g, f.blue[r]);
+  }
+  place(makeBall(Ls.you), f.ball);
+
+  setSituation(sit, null);
+  $('#stepTag').textContent = 'Coach view';
+  $('#qtext').textContent = `Situation ${state.ci + 1} of ${SITUATIONS.length}`;
+  $('#youRole').textContent = INFO[role].name;
+  $('#starBox').hidden = true;
+  $('#qdots').hidden = true;
+  $('#readBtn').hidden = true;
+  const z = f.target[role];
+  $('#coachTip').textContent = iHoldIt ? 'Has the ball.' : '📍 ' + tipFor(sit, role, z);
+  $('#coachAct').textContent = iHoldIt ? '' : '⚡ ' + sentence(JOBS[z.job].act);
+  $('#coachAct').hidden = iHoldIt;
+  showPanel('coach');
+}
+
+/* ---------------- go ---------------- */
+initSetup();
+initQuiz();
+show('setup');
+})();
+</script>
+</body>
+</html>
