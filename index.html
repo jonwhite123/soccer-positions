@@ -374,6 +374,8 @@ svg text { font-family: inherit; }
   .zone, .you-pulse { animation: none; }
 }
 </style>
+<!-- Visitor counts: GoatCounter (no cookies). Dashboard: https://soccer-positions.goatcounter.com -->
+<script data-goatcounter="https://soccer-positions.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
 <div class="app">
@@ -532,6 +534,34 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('wsib:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('wsib:' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
 };
+
+/* ---------------- visitor counts (GoatCounter, no cookies) ----------------
+   count.js counts page views by itself. These events add what it can't:
+     new-player     once per browser, the first time it opens the game
+     weekly-player  once per browser per week (Monday to Sunday), so a week's total = players that week
+     round-start / round-finished   every round
+   GoatCounter ignores localhost and file:// pages, so local testing sends nothing. */
+function track(path, title) {
+  const send = () => { try { window.goatcounter.count({ path, title, event: true }); } catch (e) { /* ignore */ } };
+  if (window.goatcounter && window.goatcounter.count) return send();
+  const tag = document.querySelector('script[data-goatcounter]');
+  if (tag) tag.addEventListener('load', send, { once: true }); // count.js still loading
+}
+function countPlayer() {
+  let isNew;
+  try {
+    localStorage.setItem('wsib:probe', '1');
+    localStorage.removeItem('wsib:probe');
+    isNew = !Object.keys(localStorage).some(k => k.startsWith('wsib:'));
+  } catch (e) { return; } // no storage: can't tell new from returning, so skip these two
+  if (isNew) track('new-player', 'New player');
+  const d = new Date(), mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 6) % 7);
+  const week = `${mon.getFullYear()}-${mon.getMonth() + 1}-${mon.getDate()}`;
+  if (store.get('week', null) !== week) {
+    track('weekly-player', 'Player this week');
+    store.set('week', week);
+  }
+}
 
 /* ------------------------------------------------------------------
    Coaching jobs. Every zone the engine hands out has one job:
@@ -1747,6 +1777,7 @@ function startRound() {
   state.stars = 0;
   show('quiz');
   renderQuestion();
+  track('round-start', 'Round started');
 }
 
 function svgPt(e) {
@@ -2083,6 +2114,7 @@ function showResults() {
   const key = 'best:' + state.role, best = store.get(key, null);
   const newBest = !best || pct > best.stars / best.max;
   if (newBest) store.set(key, { stars: state.stars, max });
+  track('round-finished', 'Round finished');
   const title = pct >= 0.9 ? 'Superstar!' : pct >= 0.7 ? 'Great job!' : pct >= 0.4 ? 'Good effort!' : 'Keep practicing!';
   $('#rTrophy').textContent = pct >= 0.9 ? '🏆' : pct >= 0.7 ? '🥇' : pct >= 0.4 ? '👍' : '⚽';
   $('#rTitle').textContent = title;
@@ -2148,6 +2180,7 @@ function renderCoach() {
 }
 
 /* ---------------- go ---------------- */
+countPlayer(); // before initSetup, which saves settings and would make every browser look returning
 initSetup();
 initQuiz();
 show('setup');
