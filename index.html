@@ -253,20 +253,25 @@ p { margin: 0; }
   display: grid; place-items: center; background: var(--blue); color: #fff; font-weight: 700;
 }
 
-.verdict { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+/* one answer box: verdict, a tick for each part, then one message */
+.answer { border-radius: 0.875rem; padding: 0.75rem 0.875rem 0.875rem; }
+.answer.good { background: var(--good-soft); }
+.answer.half { background: var(--ok-soft); }
+.answer.learn { background: var(--blue-soft); }
+.verdict { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.375rem 0.75rem; margin-bottom: 0.5rem; }
 .verdict h3 { font-size: 1.5rem; }
-.vscore { font-size: 1.25rem; font-weight: 700; white-space: nowrap; }
-.v5 { color: var(--good); }
-.v3 { color: var(--close); }
-.v1 { color: var(--ok); }
-.v0 { color: var(--bad); }
-.res-row { display: flex; gap: 0.625rem; align-items: flex-start; padding: 0.625rem 0.75rem; border-radius: 0.875rem; margin-bottom: 0.5rem; }
-.res-row.good { background: var(--good-soft); }
-.res-row.meh { background: var(--ok-soft); }
-.res-row.bad { background: var(--bad-soft); }
-.res-ico { font-size: 1.375rem; line-height: 1.2; }
-.res-head { font-weight: 700; font-size: 0.9375rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-.res-text { font-size: 1.0625rem; font-weight: 500; margin-top: 0.125rem; }
+.answer.good h3 { color: var(--good); }
+.answer.half h3 { color: var(--ok); }
+.vright { display: flex; align-items: center; gap: 0.375rem; margin-left: auto; }
+.vscore { margin-left: 0.375rem; font-size: 1.25rem; font-weight: 700; white-space: nowrap; }
+.chk {
+  display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.1875rem 0.625rem; border-radius: 999px;
+  background: var(--card); font-size: 0.9375rem; font-weight: 700; white-space: nowrap;
+}
+.answer-body { display: grid; gap: 0.375rem; font-size: 1.125rem; font-weight: 500; line-height: 1.35; }
+.lesson { display: flex; gap: 0.5rem; align-items: flex-start; }
+.lesson .ico { flex: none; }
+.lesson b { font-weight: 700; }
 .tip { background: var(--blue-soft); border-radius: 0.875rem; padding: 0.75rem 0.875rem; font-size: 1.125rem; font-weight: 500; }
 .tip + .tip { margin-top: 0.5rem; }
 .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }
@@ -412,7 +417,7 @@ svg text { font-family: inherit; }
           <span class="starcount" id="starBox">⭐ <b id="starTotal">0</b></span>
         </div>
         <span class="poss" id="poss"></span>
-        <div>
+        <div id="qprompt">
           <p class="step-tag" id="stepTag"></p>
           <div class="qline">
             <h2 class="qtext" id="qtext" aria-live="polite"></h2>
@@ -439,14 +444,15 @@ svg text { font-family: inherit; }
           <div class="options" id="options" role="group" aria-label="What should you do?"></div>
         </div>
         <div id="fbPost" hidden>
-          <div class="verdict"><h3 id="vTitle"></h3><span class="vscore" id="vScore"></span></div>
-          <div class="res-row" id="rowSpot">
-            <span class="res-ico" id="spotIco"></span>
-            <div><p class="res-head" id="spotHead"></p><p class="res-text" id="spotText"></p></div>
-          </div>
-          <div class="res-row" id="rowMove">
-            <span class="res-ico" id="moveIco"></span>
-            <div><p class="res-head" id="moveHead"></p><p class="res-text" id="moveText"></p></div>
+          <div class="answer" id="answer">
+            <div class="verdict">
+              <h3 id="vTitle"></h3>
+              <span class="vright">
+                <span class="chk" id="chkSpot"></span><span class="chk" id="chkMove"></span>
+                <span class="vscore" id="vScore"></span>
+              </span>
+            </div>
+            <div class="answer-body" id="answerBody"></div>
           </div>
           <div class="row post-row">
             <button class="btn small" id="showMeBtn" type="button">👀 Show me</button>
@@ -531,70 +537,455 @@ const store = {
    Coaching jobs. Every zone the engine hands out has one job:
      tip   – where to stand (short)
      act   – the right next move
-     why   – one-line reason
      wrong – tempting-but-wrong moves (two are picked per question)
    Defending and winning the ball back are all about INTENSITY.
 ------------------------------------------------------------------- */
 const JOBS = {
   // ---- we have the ball ----
-  gkHigh: { tip: 'Edge of your box.', act: 'Be ready to rush out and clear any long ball', why: "You're the last line if they kick it over our defenders.", wrong: ['Stand on your goal line and watch', 'Run forward to join the attack'] },
-  gkLow: { tip: 'A few steps off your line.', act: 'Talk to your defenders and be ready for a back-pass', why: 'A keeper who talks helps everyone get it right.', wrong: ['Stand quietly on your goal line', 'Run out to the halfway line'] },
-  defGo: { tip: 'One goes, one stays. You go!', act: 'Push up behind the ball and win any loose ball', why: 'Your partner is covering, so you can join in and keep the pressure on.', wrong: ['Stay back next to your partner', 'Sprint into their box to score'] },
-  defStay: { tip: 'One goes, one stays. You stay.', act: 'Stay back and be ready to stop a counter-attack', why: "If we lose it, you're the one who stops their fast break.", wrong: ['Run forward to join the attack too', 'Chase the ball wherever it goes'] },
-  defPartner: { tip: 'Spread wide on your side.', act: 'Get open so your partner can pass across to you', why: 'Two defenders spread out are much harder to press.', wrong: ['Stand right next to your partner', 'Run up to the halfway line'] },
-  cmShow: { tip: 'Find space in the middle.', act: 'Find space and call for the ball', why: 'Make it easy for our defenders to pass to you.', wrong: ['Hide behind one of their players', 'Run all the way up to their box'] },
-  cmSupport: { tip: 'Get forward next to the ball.', act: "Find space near the ball so you're an easy pass", why: 'Being close means a quick, safe pass.', wrong: ['Stand far away from the play', 'Run back to our box'] },
-  cmEdge: { tip: 'Edge of their box.', act: 'Be ready to shoot or win any ball that pops out', why: 'Loose balls at the edge of the box turn into goals.', wrong: ['Jog back to the halfway line', 'Run into the crowd next to the ball'] },
-  stTarget: { tip: 'Stay high in the middle.', act: 'Stay high and call for the long pass', why: 'You keep their defenders busy and give us a target.', wrong: ['Come all the way back for the ball', 'Stand next to our defender'] },
-  stRun: { tip: 'Furthest forward, level with their last defender.', act: 'Make a run behind their defenders for a through ball', why: 'Runs in behind scare defenders and make chances.', wrong: ['Walk back toward our goal', 'Stand still and wait'] },
-  stBox: { tip: 'In the box, in front of goal.', act: 'Find space in front of goal, ready to shoot', why: 'Strikers score from inside the box.', wrong: ['Run out to the corner flag', 'Stop and watch the ball'] },
-  wingBackPost: { tip: 'Back post!', act: 'Sprint to the back post for the cross', why: 'Crosses and rebounds land at the back post.', wrong: ['Stay out on the touchline', 'Run over to the ball to help'] },
-  wingFar: { tip: 'Wide and high on your side.', act: 'Stay wide, ready for a switch pass', why: "If we switch it, you'll have tons of space.", wrong: ['Run over to where the ball is', 'Drop back to our box'] },
-  wingBall: { tip: 'Wide and ahead of the ball.', act: "Stay wide and ahead so you're an easy pass up the line", why: 'Width gives the ball carrier a forward pass.', wrong: ['Squeeze into the middle with everyone', 'Stand behind the ball'] },
-  wingWide: { tip: 'Wide and high.', act: 'Stretch them wide and be ready to run forward', why: 'Wide players make space in the middle.', wrong: ['Squeeze into the middle', 'Drop back behind the ball'] },
+  gkHigh: { tip: 'Edge of your box.', act: 'Be ready to rush out and clear any long ball', wrong: ['Stand on your goal line and watch', 'Run forward to join the attack'] },
+  gkLow: { tip: 'A few steps off your line.', act: 'Talk to your defenders and be ready for a back-pass', wrong: ['Stand quietly on your goal line', 'Run out to the halfway line'] },
+  defGo: { tip: 'One goes, one stays. You go!', act: 'Push up behind the ball and win any loose ball', wrong: ['Stay back next to your partner', 'Sprint into their box to score'] },
+  defStay: { tip: 'One goes, one stays. You stay.', act: 'Stay back and be ready to stop a counter-attack', wrong: ['Run forward to join the attack too', 'Chase the ball wherever it goes'] },
+  defPartner: { tip: 'Spread wide on your side.', act: 'Get open so your partner can pass across to you', wrong: ['Stand right next to your partner', 'Run up to the halfway line'] },
+  cmShow: { tip: 'Find space in the middle.', act: 'Find space and call for the ball', wrong: ['Hide behind one of their players', 'Run all the way up to their box'] },
+  cmSupport: { tip: 'Get forward next to the ball.', act: "Find space near the ball so you're an easy pass", wrong: ['Stand far away from the play', 'Run back to our box'] },
+  cmEdge: { tip: 'Edge of their box.', act: 'Be ready to shoot or win any ball that pops out', wrong: ['Jog back to the halfway line', 'Run into the crowd next to the ball'] },
+  stTarget: { tip: 'Stay high in the middle.', act: 'Stay high and call for the long pass', wrong: ['Come all the way back for the ball', 'Stand next to our defender'] },
+  stRun: { tip: 'Furthest forward, level with their last defender.', act: 'Make a run behind their defenders for a through ball', wrong: ['Walk back toward our goal', 'Stand still and wait'] },
+  stBox: { tip: 'In the box, in front of goal.', act: 'Find space in front of goal, ready to shoot', wrong: ['Run out to the corner flag', 'Stop and watch the ball'] },
+  wingBackPost: { tip: 'Back post!', act: 'Sprint to the back post for the cross', wrong: ['Stay out on the touchline', 'Run over to the ball to help'] },
+  wingFar: { tip: 'Wide and high on your side.', act: 'Stay wide, ready for a switch pass', wrong: ['Run over to where the ball is', 'Drop back to our box'] },
+  wingBall: { tip: 'Wide and ahead of the ball.', act: "Stay wide and ahead so you're an easy pass up the line", wrong: ['Squeeze into the middle with everyone', 'Stand behind the ball'] },
+  wingWide: { tip: 'Wide and high.', act: 'Stretch them wide and be ready to run forward', wrong: ['Squeeze into the middle', 'Drop back behind the ball'] },
 
   // ---- they have the ball ----
-  gkFar: { tip: 'Edge of your box.', act: 'Be ready to rush out and smash away any long ball!', why: "A sweeping keeper wins balls our defenders can't reach.", wrong: ['Stand on your goal line', 'Run out to the halfway line'] },
-  gkNear: { tip: 'Between the ball and the middle of the goal.', act: 'Get set on your toes, ready to save', why: 'Be set before they shoot so you can dive either way.', wrong: ['Stand flat-footed on your line', 'Run out to the halfway line'] },
-  defCover: { tip: 'Behind your partner, toward the middle.', act: 'Cover your partner and pounce if anyone gets past!', why: "If they beat your partner, you're right there to win it.", wrong: ['Run to press the ball too', 'Push up to the halfway line'] },
-  defHigh: { tip: 'Push up toward halfway.', act: 'Push up together and attack every long ball!', why: 'A high line squeezes the space and wins the ball faster.', wrong: ['Drop deep into our box', 'Wait and watch the ball'] },
-  defNear: { tip: 'Goal-side, close to your partner.', act: 'Stay goal-side and jump in to win it on any bad touch!', why: 'Pounce on a bad touch, and never let them get behind you.', wrong: ['Run forward to attack', 'Wait for someone else to win it'] },
-  cmDeep: { tip: 'Top of our box.', act: 'Block every shot and win every loose ball!', why: 'The most dangerous space is right in front of our goal.', wrong: ['Run up to the halfway line', 'Stand and watch'] },
-  cmHigh: { tip: 'Just behind the press, in the middle.', act: 'Step up and steal any pass into the middle!', why: 'When they try to escape the press, you win it.', wrong: ['Drop back into our box', 'Wait for them to come to you'] },
-  cmDef: { tip: 'Middle, between the ball and our goal.', act: 'Shut the middle and tackle anyone who comes through!', why: 'Nobody gets through the middle. Force them wide.', wrong: ['Run up to join the striker', 'Go out to the touchline'] },
-  wingCorner: { tip: 'Corner of our box.', act: 'Sprint back and block the pass into the middle!', why: 'A pass back into the middle is the most dangerous one.', wrong: ['Stay up near halfway', 'Run out to the corner flag'] },
-  wingDouble: { tip: 'Goal-side, next to your defender.', act: 'Sprint back and trap them with your defender. Win it!', why: 'Two on one wins the ball!', wrong: ['Jog back slowly', 'Wait up the pitch for a pass'] },
-  wingHelp: { tip: 'Tuck in and help, goal-side.', act: 'Sprint back NOW and help win the ball!', why: 'Help your teammate win it back fast.', wrong: ['Wait up the pitch', 'Walk back to your spot'] },
-  wingPushUp: { tip: 'Push up on your side.', act: 'Push up and steal the pass out wide!', why: 'If they pass it wide, you pounce and win it.', wrong: ['Drop back to our box', 'Stand and watch'] },
-  wingTuck: { tip: 'Tuck in, level with the ball.', act: 'Tuck in and steal any pass through the middle!', why: "Close the middle so they can't play through us.", wrong: ['Stay out on the touchline', 'Run up to the striker'] },
-  wingFarDef: { tip: 'Tuck in toward the middle.', act: 'Sprint over and help win the ball in the middle!', why: 'The ball is far away, so help where the danger is.', wrong: ['Stay wide and wait', 'Walk back slowly'] },
-  wingFarHigh: { tip: 'Tuck in and push up.', act: 'Tuck in and steal the switch pass!', why: 'If they try to switch it, you steal it.', wrong: ['Run back to our box', 'Stay wide and wait'] },
-  stLow: { tip: 'Near halfway, in the middle.', act: 'Steal any pass back, then burst forward when we win it!', why: "When we win it, you're the first pass for a counter-attack.", wrong: ['Walk around and rest', 'Run all the way back to our box'] },
-  stHigh: { tip: 'Push up in the middle.', act: 'Push up and steal the pass inside!', why: 'Force them wide, where our wingers can trap them.', wrong: ['Walk back to halfway', 'Stand still and rest'] },
-  help: { tip: 'Right next to the ball.', act: 'Sprint in and trap them. Two of you, win it NOW!', why: 'Two players pressing together win the ball back.', wrong: ['Leave it to your teammate', 'Jog back to your spot', 'Block the pass and wait'] },
-  trap: { tip: 'Inside the ball. Trap them!', act: "Cut off the inside and steal it. They're trapped!", why: "Winger plus striker means they're trapped on the touchline!", wrong: ['Wait in the middle and watch', 'Walk back to halfway'] },
-  counter: { tip: 'Swarm the ball with your teammates!', act: "Sprint in and win it back NOW. Don't stop until we have it!", why: 'When an attacker loses it, all three attackers hunt it together!', wrong: ['Block the pass and wait', 'Jog back to your position', 'Let your teammate chase it'] },
-  pressD: { tip: "You're closest: press the ball!", act: "Go get the ball NOW! Stay on your feet and tackle until it's yours!", why: 'The closest player presses right away. No waiting!', wrong: ['Wait for them to come to you', 'Back off toward our goal'] },
-  pressCM: { tip: "It's in the middle: press it!", act: "Get in their face NOW and win the ball! Don't let them turn!", why: 'The middle is your area. Press hard!', wrong: ['Wait for them to come to you', 'Drop back behind our defenders'] },
-  pressW: { tip: "It's on your side: press it!", act: "Sprint at them and take the ball! Don't let them run down the line!", why: 'Ball on your side means you press. Go hard!', wrong: ['Wait for our defender to do it', 'Stay up the pitch for a pass'] },
-  pressST: { tip: "It's in their half: hunt it down!", act: "Hunt the ball down NOW. Don't stop until you win it!", why: 'Pressing high wins the ball close to their goal.', wrong: ['Wait near halfway', 'Let them pass it around'] },
-  loser: { tip: 'Right on the ball, goal-side.', act: "Go get the ball now! Don't give up tackling until you have it!", why: 'Losing it is OK. Giving up is not! Whoever loses it chases hardest.', wrong: ['Put your hands on your head and walk back', 'Jog back to your position', 'Wait for a teammate to win it'] },
-  loserGK: { tip: 'Between the ball and the goal.', act: 'Attack the ball NOW! Block it, smother it, grab it!', why: 'Never give up! Win it back before they can shoot.', wrong: ['Walk back to your goal line', 'Wait for a defender to fix it'] },
-  loose: { tip: "You're closest. Get there first!", act: 'Attack the loose ball! Get there first and win it!', why: 'Loose balls go to whoever wants it more. Make it you!', wrong: ['Wait to see who gets it', 'Let your teammate go for it', 'Back off and stay in your spot'] },
-  looseHelp: { tip: 'Right behind the ball.', act: 'Sprint in! If they get there first, tackle them and win it!', why: 'Two players chasing means we win the loose ball.', wrong: ['Wait to see who gets it', 'Jog back to your spot'] },
+  gkFar: { tip: 'Edge of your box.', act: 'Be ready to rush out and smash away any long ball!', wrong: ['Stand on your goal line', 'Run out to the halfway line'] },
+  gkNear: { tip: 'Between the ball and the middle of the goal.', act: 'Get set on your toes, ready to save', wrong: ['Stand flat-footed on your line', 'Run out to the halfway line'] },
+  defCover: { tip: 'Behind your partner, toward the middle.', act: 'Cover your partner and pounce if anyone gets past!', wrong: ['Run to press the ball too', 'Push up to the halfway line'] },
+  defHigh: { tip: 'Push up toward halfway.', act: 'Push up together and attack every long ball!', wrong: ['Drop deep into our box', 'Wait and watch the ball'] },
+  defNear: { tip: 'Goal-side, close to your partner.', act: 'Stay goal-side and jump in to win it on any bad touch!', wrong: ['Run forward to attack', 'Wait for someone else to win it'] },
+  cmDeep: { tip: 'Top of our box.', act: 'Block every shot and win every loose ball!', wrong: ['Run up to the halfway line', 'Stand and watch'] },
+  cmHigh: { tip: 'Just behind the press, in the middle.', act: 'Step up and steal any pass into the middle!', wrong: ['Drop back into our box', 'Wait for them to come to you'] },
+  cmDef: { tip: 'Middle, between the ball and our goal.', act: 'Shut the middle and tackle anyone who comes through!', wrong: ['Run up to join the striker', 'Go out to the touchline'] },
+  wingCorner: { tip: 'Corner of our box.', act: 'Sprint back and block the pass into the middle!', wrong: ['Stay up near halfway', 'Run out to the corner flag'] },
+  wingDouble: { tip: 'Goal-side, next to your defender.', act: 'Sprint back and trap them with your defender. Win it!', wrong: ['Jog back slowly', 'Wait up the pitch for a pass'] },
+  wingHelp: { tip: 'Tuck in and help, goal-side.', act: 'Sprint back NOW and help win the ball!', wrong: ['Wait up the pitch', 'Walk back to your spot'] },
+  wingPushUp: { tip: 'Push up on your side.', act: 'Push up and steal the pass out wide!', wrong: ['Drop back to our box', 'Stand and watch'] },
+  wingTuck: { tip: 'Tuck in, level with the ball.', act: 'Tuck in and steal any pass through the middle!', wrong: ['Stay out on the touchline', 'Run up to the striker'] },
+  wingFarDef: { tip: 'Tuck in toward the middle.', act: 'Sprint over and help win the ball in the middle!', wrong: ['Stay wide and wait', 'Walk back slowly'] },
+  wingFarHigh: { tip: 'Tuck in and push up.', act: 'Tuck in and steal the switch pass!', wrong: ['Run back to our box', 'Stay wide and wait'] },
+  stLow: { tip: 'Near halfway, in the middle.', act: 'Steal any pass back, then burst forward when we win it!', wrong: ['Walk around and rest', 'Run all the way back to our box'] },
+  stHigh: { tip: 'Push up in the middle.', act: 'Push up and steal the pass inside!', wrong: ['Walk back to halfway', 'Stand still and rest'] },
+  help: { tip: 'Right next to the ball.', act: 'Sprint in and trap them. Two of you, win it NOW!', wrong: ['Leave it to your teammate', 'Jog back to your spot', 'Block the pass and wait'] },
+  trap: { tip: 'Inside the ball. Trap them!', act: "Cut off the inside and steal it. They're trapped!", wrong: ['Wait in the middle and watch', 'Walk back to halfway'] },
+  counter: { tip: 'Swarm the ball with your teammates!', act: "Sprint in and win it back NOW. Don't stop until we have it!", wrong: ['Block the pass and wait', 'Jog back to your position', 'Let your teammate chase it'] },
+  pressD: { tip: "You're closest: press the ball!", act: "Go get the ball NOW! Stay on your feet and tackle until it's yours!", wrong: ['Wait for them to come to you', 'Back off toward our goal'] },
+  pressCM: { tip: "It's in the middle: press it!", act: "Get in their face NOW and win the ball! Don't let them turn!", wrong: ['Wait for them to come to you', 'Drop back behind our defenders'] },
+  pressW: { tip: "It's on your side: press it!", act: "Sprint at them and take the ball! Don't let them run down the line!", wrong: ['Wait for our defender to do it', 'Stay up the pitch for a pass'] },
+  pressST: { tip: "It's in their half: hunt it down!", act: "Hunt the ball down NOW. Don't stop until you win it!", wrong: ['Wait near halfway', 'Let them pass it around'] },
+  loser: { tip: 'Right on the ball, goal-side.', act: "Go get the ball now! Don't give up tackling until you have it!", wrong: ['Put your hands on your head and walk back', 'Jog back to your position', 'Wait for a teammate to win it'] },
+  loserGK: { tip: 'Between the ball and the goal.', act: 'Attack the ball NOW! Block it, smother it, grab it!', wrong: ['Walk back to your goal line', 'Wait for a defender to fix it'] },
+  loose: { tip: "You're closest. Get there first!", act: 'Attack the loose ball! Get there first and win it!', wrong: ['Wait to see who gets it', 'Let your teammate go for it', 'Back off and stay in your spot'] },
+  looseHelp: { tip: 'Right behind the ball.', act: 'Sprint in! If they get there first, tackle them and win it!', wrong: ['Wait to see who gets it', 'Jog back to your spot'] },
 
   // ---- goal kicks ----
-  ogkD: { tip: 'Split wide to the corner of the box.', act: 'Get open and call for the pass from the keeper', why: 'Their players must wait behind the line, so you have time.', wrong: ['Stand right next to the keeper', 'Run up to the halfway line'] },
-  ogkCM: { tip: 'Middle, in front of our box.', act: 'Get open in the middle and call for the ball', why: "You're the keeper's middle option.", wrong: ['Hide behind their striker', 'Stand in our goal area'] },
-  ogkW: { tip: 'Wide by the touchline.', act: 'Stay wide, ready to get the ball and run', why: "There's lots of space out wide.", wrong: ['Come into the middle to get it', 'Stand in our box'] },
-  ogkST: { tip: 'High and in the middle.', act: 'Stay high to push their defenders back', why: 'That gives your teammates more space.', wrong: ['Come back to get the ball from the keeper', 'Stand out on the touchline'] },
-  tgkGK: { tip: 'Top of your box.', act: 'Be ready to rush out and smash away a long kick!', why: 'Their keeper might kick it long over everyone.', wrong: ['Stand on your goal line', 'Run up to halfway'] },
-  tgkD: { tip: 'Goal-side of their striker.', act: 'Attack any long kick and win it!', why: "Win the long ball and they can't get going.", wrong: ['Push up past their striker', 'Stand and watch the kick'] },
-  tgkCM: { tip: 'Just behind our front three.', act: 'Pounce on any pass into the middle and win it!', why: 'If they play it into the middle, you win it.', wrong: ['Drop back to our box', 'Stand still and watch'] },
-  tgkW: { tip: 'At the line on your side.', act: 'Sprint at their defender the second the keeper passes!', why: 'Pressing right away wins the ball near their goal.', wrong: ['Cross the line early to get closer', 'Wait and watch where it goes'] },
-  tgkST: { tip: 'At the line, in the middle.', act: 'Sprint at the ball the second the keeper passes!', why: 'Pressing right away wins the ball near their goal.', wrong: ['Cross the line early to get closer', 'Walk back to halfway'] },
+  ogkD: { tip: 'Split wide to the corner of the box.', act: 'Get open and call for the pass from the keeper', wrong: ['Stand right next to the keeper', 'Run up to the halfway line'] },
+  ogkCM: { tip: 'Middle, in front of our box.', act: 'Get open in the middle and call for the ball', wrong: ['Hide behind their striker', 'Stand in our goal area'] },
+  ogkW: { tip: 'Wide by the touchline.', act: 'Stay wide, ready to get the ball and run', wrong: ['Come into the middle to get it', 'Stand in our box'] },
+  ogkST: { tip: 'High and in the middle.', act: 'Stay high to push their defenders back', wrong: ['Come back to get the ball from the keeper', 'Stand out on the touchline'] },
+  tgkGK: { tip: 'Top of your box.', act: 'Be ready to rush out and smash away a long kick!', wrong: ['Stand on your goal line', 'Run up to halfway'] },
+  tgkD: { tip: 'Goal-side of their striker.', act: 'Attack any long kick and win it!', wrong: ['Push up past their striker', 'Stand and watch the kick'] },
+  tgkCM: { tip: 'Just behind our front three.', act: 'Pounce on any pass into the middle and win it!', wrong: ['Drop back to our box', 'Stand still and watch'] },
+  tgkW: { tip: 'At the line on your side.', act: 'Sprint at their defender the second the keeper passes!', wrong: ['Cross the line early to get closer', 'Wait and watch where it goes'] },
+  tgkST: { tip: 'At the line, in the middle.', act: 'Sprint at the ball the second the keeper passes!', wrong: ['Cross the line early to get closer', 'Walk back to halfway'] },
 };
 const PRESS_JOB = { GK: 'loserGK', LD: 'pressD', RD: 'pressD', CM: 'pressCM', LW: 'pressW', RW: 'pressW', ST: 'pressST' };
+
+/* ------------------------------------------------------------------
+   What we say after both answers are in. One entry per job:
+     at      – where to stand. Finishes "That's the right place to be, ___"
+               and "The best spot is ___".
+     move    – the right move. Finishes "the right move is to ___".
+     spotWhy – why that spot matters (move right, spot wrong).
+     moveWhy – why that move matters (spot right, move wrong).
+     kid     – [where to stand, what to do, why] in plain words for an
+               8-year-old. Used when both answers were wrong.
+   Technical words are fine in at/move/spotWhy/moveWhy; keep kid simple.
+------------------------------------------------------------------- */
+const TALK = {
+  // ---- we have the ball ----
+  gkHigh: {
+    at: 'at the edge of your box',
+    move: 'be ready to rush out and clear any long ball',
+    spotWhy: "With the ball up the pitch, our defenders push up too. If they kick it long over them, you have to get there first, and you can't do that from your goal line.",
+    moveWhy: "You're the last line. If they kick a long ball over our defenders and you're not ready, their striker is through on goal.",
+    kid: ['Stand at the front of your big box, not on your goal line.', 'Watch the ball. If they kick it long, run out and kick it away.', 'Our team is far up the field, so there is lots of empty space behind them. You guard that space.'],
+  },
+  gkLow: {
+    at: 'a few steps off your line',
+    move: 'talk to your defenders and be ready for a back-pass',
+    spotWhy: 'A few steps out, you can collect a back-pass and still get back to cover your goal.',
+    moveWhy: 'You can see the whole pitch. Telling defenders where to go, and being an easy back-pass, helps us keep the ball.',
+    kid: ['Take a few steps out from your goal line.', 'Talk to your defenders, and be ready if they pass it back to you.', 'You can see everything from back there, so your voice helps the team. A pass back to you keeps the ball safe.'],
+  },
+  defGo: {
+    at: 'up behind the ball',
+    move: 'push up behind the ball and win any loose ball',
+    spotWhy: 'One defender goes, one stays. Your partner is covering, so you push up to support the attack and keep the pressure on.',
+    moveWhy: "If we lose it, you're close enough to win it straight back before they can get going.",
+    kid: ['Move up the field, just behind the ball.', 'Help the attack. If the ball comes loose, go and win it.', 'Your defending partner stays back to guard the goal, so it is safe for you to go forward and help.'],
+  },
+  defStay: {
+    at: 'back in the middle as cover',
+    move: 'stay back and be ready to stop a counter-attack',
+    spotWhy: 'One goes, one stays. Your partner went forward, so you stay between the ball and our goal in case we lose it.',
+    moveWhy: 'If we lose the ball, their fast break comes straight at you. Being ready means you can stop it before it starts.',
+    kid: ['Stay back, between the ball and our goal.', 'Watch the play, and be ready to stop them if they get the ball.', 'Your defending partner went forward. Somebody has to guard our goal, and that is you!'],
+  },
+  defPartner: {
+    at: 'out wide on your side',
+    move: 'get open so your partner can pass across to you',
+    spotWhy: 'When your partner has the ball, you split wide. Two defenders spread out are much harder to press than two standing together.',
+    moveWhy: "If you're open, your partner always has a safe pass. That's how we keep the ball when they press us.",
+    kid: ['Move out wide on your side, away from your partner.', 'Get open so your partner can pass the ball to you.', "If you stand close together, one of their players can block you both. Spread out and they can't."],
+  },
+  cmShow: {
+    at: 'in space in the middle',
+    move: 'find space and call for the ball',
+    spotWhy: 'Our defenders need a pass through the middle. Standing in space, away from their players, makes you that pass.',
+    moveWhy: 'If you hide behind their players, our defenders have nobody to pass to and have to kick it away.',
+    kid: ['Go to the middle of the field, in an open space away from their players.', 'Shout for the ball so our defenders can pass to you.', 'Our defenders need someone to pass to. If you are open, that someone is you.'],
+  },
+  cmSupport: {
+    at: 'in space close to the ball',
+    move: "find space near the ball so you're an easy pass",
+    spotWhy: 'Close to the ball and in space, you give the player on the ball a quick, safe pass.',
+    moveWhy: "A short pass is the safest pass. If you're far away, the pass is long and easy for them to steal.",
+    kid: ['Get close to the ball, in an open space.', 'Get open so your teammate can make an easy pass to you.', 'Short passes are easy to make and hard for them to steal.'],
+  },
+  cmEdge: {
+    at: 'at the edge of their box',
+    move: 'be ready to shoot or win any ball that pops out',
+    spotWhy: "When we attack their box, shots get blocked and the ball pops out to the edge. That's where you want to be.",
+    moveWhy: "Loose balls at the edge of the box turn into shots and goals. If you're not ready, they clear it.",
+    kid: ['Stand just outside their big box.', 'Be ready to shoot if the ball comes to you.', 'When they block a shot, the ball often bounces out to right there. Be ready to shoot it again!'],
+  },
+  stTarget: {
+    at: 'high up in the middle',
+    move: 'stay high and call for the long pass',
+    spotWhy: 'Staying high pins their defenders back. That gives us space in the middle and a long pass to aim for.',
+    moveWhy: "If you come all the way back, their defenders push up and squeeze us. Up high, you're a target for the long pass.",
+    kid: ['Stay far up the field, in the middle.', 'Shout for a long pass.', 'If you stay up high, their defenders have to stay back to watch you. That gives your team more room.'],
+  },
+  stRun: {
+    at: 'level with their last defender',
+    move: 'make a run behind their defenders for a through ball',
+    spotWhy: "Level with their last defender, you're one quick step from running in behind them.",
+    moveWhy: "A run in behind scares their defenders. Even if the pass doesn't come, it pushes them back and makes space for our midfielders.",
+    kid: ['Stand next to their last defender, the one closest to their goal.', 'Run past them into the empty space, so we can pass the ball ahead of you.', 'If you get behind their defenders, only the keeper is left to beat!'],
+  },
+  stBox: {
+    at: 'in the box in front of goal',
+    move: 'find space in front of goal, ready to shoot',
+    spotWhy: 'Most goals are scored from inside the box. When the ball goes wide, the striker gets in front of goal.',
+    moveWhy: "If you're out by the corner flag or standing still, nobody is there to finish the chance.",
+    kid: ['Stand in the big box, in front of their goal.', 'Find an open space and get ready to shoot.', 'Most goals are scored close to the goal. Be there when the ball comes!'],
+  },
+  wingBackPost: {
+    at: 'at the back post',
+    move: 'sprint to the back post for the cross',
+    spotWhy: 'When the ball is on the other wing near their box, crosses and rebounds land at the back post.',
+    moveWhy: 'Crosses that fly past everyone drop at the back post. If you stay on the touchline, nobody is there to score.',
+    kid: ['Go to the far side of their goal, just in front of it.', 'Run there fast, ready for the pass across the goal.', 'Passes from the side often fly past everyone and land on the far side. Be there to score!'],
+  },
+  wingFar: {
+    at: 'wide and high on your side',
+    move: 'stay wide, ready for a switch pass',
+    spotWhy: 'With the ball on the other side, their players crowd over there, so your side is wide open.',
+    moveWhy: "If you run over to the ball, you bring your defender with you and everything gets crowded. Wide, you're the switch pass into space.",
+    kid: ['Stay out wide on your side of the field, up high.', 'Wait out wide for a long pass across the field.', 'Everyone is crowded near the ball. Your side is empty, so you will have lots of room.'],
+  },
+  wingBall: {
+    at: 'wide and ahead of the ball',
+    move: "stay wide and ahead so you're an easy pass up the line",
+    spotWhy: 'Wide and ahead of the ball, you give the player on the ball a forward pass up the line.',
+    moveWhy: "If you squeeze into the middle, there's no pass up the line and the player on the ball gets trapped.",
+    kid: ['Stay out wide near the side line, a little ahead of the ball.', 'Get open so your teammate can pass the ball forward to you.', 'If you go into the middle, your teammate has nobody to pass to and gets stuck.'],
+  },
+  wingWide: {
+    at: 'wide and high',
+    move: 'stretch them wide and be ready to run forward',
+    spotWhy: 'Staying wide drags their defenders apart and opens up space in the middle.',
+    moveWhy: 'Wide players stretch the defense. If you squeeze in, everything gets crowded and harder to pass through.',
+    kid: ['Stay out wide near the side line, up the field.', 'Stay wide, and be ready to run forward for a pass.', 'When you stay wide, their defenders spread out too. That makes room for your teammates.'],
+  },
+
+  // ---- they have the ball ----
+  gkFar: {
+    at: 'at the edge of your box',
+    move: 'be ready to rush out and smash away any long ball',
+    spotWhy: 'With the ball far away, our defenders push up. You sweep up the space behind them from the edge of your box.',
+    moveWhy: "If they kick it over our defenders and you're not ready, their striker gets a free run at goal.",
+    kid: ['Stand at the front of your big box.', 'If they kick it long, run out and kick it away.', 'The ball is far away, so you guard the big empty space behind our defenders.'],
+  },
+  gkNear: {
+    at: 'between the ball and the middle of the goal',
+    move: 'get set on your toes, ready to save',
+    spotWhy: 'From there, you cover as much of the goal as you can, and you can reach both posts.',
+    moveWhy: "If you're flat-footed when they shoot, you can't dive. Set on your toes, you can go either way.",
+    kid: ['Stand in a straight line between the ball and the middle of your goal.', 'Bend your knees, get on your toes, and be ready to save.', 'From there you can reach both sides of the goal, and being ready helps you dive fast.'],
+  },
+  defCover: {
+    at: 'behind your partner toward the middle',
+    move: 'cover your partner and pounce if anyone gets past',
+    spotWhy: "Your partner is pressing the ball, so you drop behind them, toward the middle. That's cover.",
+    moveWhy: "If you press too, one pass gets past you both. When you cover, anyone who beats your partner runs straight into you.",
+    kid: ['Stand behind your defending partner, a bit closer to the middle.', 'If their player gets past your partner, you win the ball.', 'If you both chase the ball, one pass gets past you both. You are the backup!'],
+  },
+  defHigh: {
+    at: 'pushed up toward halfway',
+    move: 'push up together and attack every long ball',
+    spotWhy: 'When the ball is in their half, we push our back line up toward halfway. That squeezes the space they can play in.',
+    moveWhy: 'A high line wins long balls before they turn into chances. If you wait and watch, they get time to pick a pass.',
+    kid: ['Move up the field toward the halfway line, level with your partner.', 'Move up together, and win any long kick.', 'If we stay close to the ball, they have less room to play, and we win it back faster.'],
+  },
+  defNear: {
+    at: 'goal-side and close to your partner',
+    move: 'stay goal-side and jump in to win it on any bad touch',
+    spotWhy: "Goal-side means between their player and our goal. From there, they can't get behind you.",
+    moveWhy: 'A bad touch is your chance to win it. Never let them get behind you, but pounce the second the ball gets away from them.',
+    kid: ['Stand between their player and our goal, close to your partner.', 'Stay ready. If they kick the ball too far in front of them, jump in and take it.', "Their player can't get past you if you are between them and our goal."],
+  },
+  cmDeep: {
+    at: 'at the top of our box',
+    move: 'block every shot and win every loose ball',
+    spotWhy: 'With the ball near our goal, the top of our box is the most dangerous space. Shots and cut-backs come from there.',
+    moveWhy: "Most shots come from the top of the box. If you're there to block and win loose balls, they never get a clean shot.",
+    kid: ['Stand at the front of our big box.', 'Block their shots, and win any ball that bounces loose.', 'That is where they like to shoot from. If you are there, you can stop the shot.'],
+  },
+  cmHigh: {
+    at: 'just behind the press in the middle',
+    move: 'step up and steal any pass into the middle',
+    spotWhy: "Just behind our press, you're standing in the gap they try to pass through to escape.",
+    moveWhy: 'When they try to pass their way out of the press, the ball comes into the middle. Step up and it is ours.',
+    kid: ['Stand in the middle, just behind your teammates who are chasing the ball.', 'Watch for a pass into the middle, and steal it.', 'When your teammates chase them, they try to pass through the middle. You will be there to grab it!'],
+  },
+  cmDef: {
+    at: 'in the middle between the ball and our goal',
+    move: 'shut the middle and tackle anyone who comes through',
+    spotWhy: 'From there, you block the shortest way to our goal.',
+    moveWhy: "If they get through the middle, they're running straight at our goal. Shut it and they have to go wide.",
+    kid: ['Stand in the middle of the field, between the ball and our goal.', "Don't let them through the middle. Tackle anyone who tries.", 'The middle is the shortest way to our goal. Block it, and they have to go the long way round.'],
+  },
+  wingCorner: {
+    at: 'at the corner of our box',
+    move: 'sprint back and block the pass into the middle',
+    spotWhy: 'With the ball deep on your side, the pass back into the middle goes past the corner of our box. You are there to block it.',
+    moveWhy: 'A pass back into the middle, right in front of our goal, is the most dangerous pass. Block it and the danger is gone.',
+    kid: ['Run back to the corner of our big box, on your side.', 'Block any pass they try to make into the middle.', 'A pass into the middle near our goal could turn into a goal for them. You stop it!'],
+  },
+  wingDouble: {
+    at: 'goal-side next to our defender',
+    move: 'sprint back and trap them with your defender',
+    spotWhy: "With the ball on your side near our box, you get goal-side next to our defender so it's two against one.",
+    moveWhy: 'Two on one wins the ball. If you jog back, our defender is on their own and easy to beat.',
+    kid: ['Run back so you are between their player and our goal, next to our defender.', 'Help our defender, two of you against one of them, and win the ball.', 'Two players against one usually wins the ball!'],
+  },
+  wingHelp: {
+    at: 'tucked in and goal-side near the ball',
+    move: 'sprint back and help win the ball',
+    spotWhy: 'The ball is on your side, so you tuck in goal-side, close enough to help win it.',
+    moveWhy: 'The faster you get back and help, the faster we win it back. Waiting up the pitch leaves your teammate on their own.',
+    kid: ['Run back so you are between the ball and our goal, close to the ball.', 'Sprint back and help your teammate win the ball.', 'The ball is on your side, so it is your job to help. Two players win the ball faster than one.'],
+  },
+  wingPushUp: {
+    at: 'pushed up on your side',
+    move: 'push up and steal the pass out wide',
+    spotWhy: "The ball is in the middle of their half. Pushed up on your side, you're ready to jump on their pass out wide.",
+    moveWhy: 'If they pass it wide and you are there, we win it near their goal. If you drop back, they escape easily.',
+    kid: ['Move up the field on your side.', 'If they pass it out wide to your side, steal it.', 'When we are close to their players, they have nowhere easy to pass.'],
+  },
+  wingTuck: {
+    at: 'tucked in level with the ball',
+    move: 'tuck in and steal any pass through the middle',
+    spotWhy: 'When the ball is in the middle, you tuck in level with it to close the middle.',
+    moveWhy: "If you stay out on the touchline, there's a gap in the middle and they can pass straight through us.",
+    kid: ['Move in toward the middle, level with the ball.', 'Steal any pass they try through the middle.', "When we squeeze together in the middle, they can't pass through us."],
+  },
+  wingFarDef: {
+    at: 'tucked in toward the middle',
+    move: 'sprint over and help win the ball in the middle',
+    spotWhy: "The ball is on the other side, so nobody is passing to your wing yet. Tuck in where the danger is.",
+    moveWhy: "Standing wide on the far side doesn't stop anything. Help where the ball is and we win it back faster.",
+    kid: ['Move in toward the middle of the field.', 'Run over and help win the ball.', 'The ball is on the other side. Help your team where the ball is!'],
+  },
+  wingFarHigh: {
+    at: 'tucked in and pushed up',
+    move: 'tuck in and steal the switch pass',
+    spotWhy: 'The ball is on the other side of their half, so if they try to switch it across, the pass comes straight to you.',
+    moveWhy: 'When we press them, they try to switch it across the pitch. If you are tucked in and high, you steal it.',
+    kid: ['Move in toward the middle, and up the field.', 'If they try a long pass across the field, steal it.', 'When we chase them, they try to pass across to the other side. You will be waiting!'],
+  },
+  stLow: {
+    at: 'near halfway in the middle',
+    move: 'steal any pass back and burst forward when we win it',
+    spotWhy: "From there, you block their pass back, and you're the first pass when we win it.",
+    moveWhy: "When we win it, you're the outlet for a counter-attack. If you rest, or run all the way back, there's no counter.",
+    kid: ['Stand near the halfway line, in the middle.', 'Steal any pass back. When we win the ball, run forward fast.', 'When our team wins the ball, you are the first one we pass to for a fast attack.'],
+  },
+  stHigh: {
+    at: 'pushed up in the middle',
+    move: 'push up and steal the pass inside',
+    spotWhy: "The ball is in their half. Pushed up in the middle, you stop them passing inside, so they have to go wide.",
+    moveWhy: 'Blocking the middle forces them wide, where our wingers can trap them against the touchline.',
+    kid: ['Move up the field, in the middle.', 'Block passes through the middle, and steal them.', "If they can't pass through the middle, they have to go to the side, where we can trap them."],
+  },
+  help: {
+    at: 'right next to the ball with your teammate',
+    move: 'sprint in and trap them with your teammate',
+    spotWhy: "We just lost it and you're one of the closest, so you join in. Two players right on the ball can trap them.",
+    moveWhy: 'One presser can be dodged. Two together trap the player and win it back before they can attack.',
+    kid: ['Run right next to the ball, beside your teammate.', 'Help your teammate win the ball. Two of you against one!', 'It is really hard to keep the ball when two players are trying to take it.'],
+  },
+  trap: {
+    at: 'inside the ball next to our winger',
+    move: 'cut off the inside and steal it',
+    spotWhy: 'The ball is out wide in their half. Inside the ball, you and our winger trap them against the touchline.',
+    moveWhy: "With the touchline on one side and you on the other, they have nowhere to go. That's how we win it high up the pitch.",
+    kid: ['Run to the inside of the ball, toward the middle, next to our winger.', 'Block the way into the middle, and steal the ball.', 'With the side line on one side and you on the other, they are trapped!'],
+  },
+  counter: {
+    at: 'right by the ball with the other attackers',
+    move: "sprint in and win it back now, and don't stop until we have it",
+    spotWhy: "When we lose it up front, all three attackers swarm the ball. Right by it, they can't pass or dribble their way out.",
+    moveWhy: "Winning it back straight away, high up the pitch, is one of our best chances to score. If we let them pass it around, they start an attack and our three attackers are left behind the play.",
+    kid: ['Run right next to the ball, with the other attackers.', "Help win the ball back right now. Don't stop until we have it!", 'If we win it back right away, we are already close to their goal. That is a great time to score!'],
+  },
+  pressD: {
+    at: 'goal-side and right on the ball',
+    move: "press the ball now and tackle until it's yours",
+    spotWhy: "You're the closest, so you press. Goal-side means between the ball and our goal, so they can't dribble past you to it.",
+    moveWhy: 'The closest player presses straight away. Every second you wait gives them time to look up and pick a pass.',
+    kid: ['Run right up to the player with the ball, staying between them and our goal.', 'Go get the ball! Stay on your feet, and keep trying until you win it.', 'You are the closest, so it is your job. If you wait, they have time to pass or shoot.'],
+  },
+  pressCM: {
+    at: 'goal-side and right on the ball',
+    move: "get in their face now and don't let them turn",
+    spotWhy: "The ball is in the middle, which is your area. Press it goal-side so they can't turn and run at our goal.",
+    moveWhy: 'If they turn in the middle, they can run straight at our goal. Pressing straight away stops them turning.',
+    kid: ['Run right up to the player with the ball, between them and our goal.', "Get close, and don't let them turn around toward our goal.", 'The ball is in the middle, so it is your job. If they turn around, they can run right at our goal.'],
+  },
+  pressW: {
+    at: 'goal-side and right on the ball',
+    move: "sprint at them and don't let them run down the line",
+    spotWhy: "The ball is on your side, so you press it, goal-side, so they can't run down the line.",
+    moveWhy: 'The winger on the ball side presses first. If you wait for our defender, they run down the line at our goal.',
+    kid: ['Run right up to the player with the ball, between them and our goal.', "Go get the ball, and don't let them run down the side line.", 'The ball is on your side, so it is your job. If you wait, they run right past you.'],
+  },
+  pressST: {
+    at: 'goal-side and right on the ball',
+    move: "hunt the ball down now and don't stop until you win it",
+    spotWhy: "The ball is in their half and you're the closest, so you press it.",
+    moveWhy: 'Win it high up the pitch and we are right next to their goal. Let them pass it around and they build an attack.',
+    kid: ['Run right up to the player with the ball.', "Chase the ball and try to win it. Don't stop!", 'If you win the ball near their goal, you might get to score!'],
+  },
+  loser: {
+    at: 'goal-side and right on the ball',
+    move: "go get the ball now and keep tackling until it's yours",
+    spotWhy: "You lost it, so you're the closest. Get straight back on the ball, goal-side, so they can't just run past you.",
+    moveWhy: "If you lose the ball, no matter how high up the field, it's really important to win it back straight away. If we don't, they can start an attack, and once the ball is past you, that's one less player they have to get through.",
+    kid: ['Stay right next to the ball, between it and our goal.', 'Go get the ball back! Keep trying until you win it.', 'Losing the ball is OK. Everyone does it! If you chase it right away, you can win it back before they attack.'],
+  },
+  loserGK: {
+    at: 'between the ball and our goal',
+    move: 'attack the ball now and block it, smother it or grab it',
+    spotWhy: 'You lost it right by our goal. Getting straight back in the way is the only thing that stops a shot.',
+    moveWhy: "The ball is right by our goal. If you don't attack it now, they get a free shot.",
+    kid: ['Get between the ball and our goal.', 'Attack the ball! Block it, dive on it or grab it.', 'The ball is very close to our goal. You have to stop them before they shoot!'],
+  },
+  loose: {
+    at: 'right on the loose ball',
+    move: 'attack the loose ball and get there first',
+    spotWhy: "You're the closest, so the loose ball is yours to win.",
+    moveWhy: 'Loose balls go to whoever wants it more. If you wait to see who gets it, they will.',
+    kid: ['Run right to the ball. You are the closest!', 'Get there first and win it.', 'Nobody has the ball. Whoever gets there first gets it. Make it you!'],
+  },
+  looseHelp: {
+    at: 'right behind the ball',
+    move: 'sprint in and tackle if they get there first',
+    spotWhy: "Your teammate is going for the loose ball. Right behind it, you're ready if their player gets there first.",
+    moveWhy: 'Two players chasing the loose ball means we win it, even if their player gets there first.',
+    kid: ['Run close to the ball, just behind your teammate.', 'If their player gets the ball first, tackle them and win it.', 'Two players chasing means we win it, even if they get there first.'],
+  },
+
+  // ---- goal kicks ----
+  ogkD: {
+    at: 'wide at the corner of our box',
+    move: 'get open and call for the pass from the keeper',
+    spotWhy: 'On our goal kick, the defenders split wide to the corners of the box, so the keeper has an easy pass to either side.',
+    moveWhy: "Their players can't cross the build-out line until you get the ball, so you have time and space. Call for it!",
+    kid: ['Go out wide, to the corner of our big box.', 'Get open, and call for the ball from our keeper.', 'Their players have to wait behind the dotted line, so you will have lots of time with the ball.'],
+  },
+  ogkCM: {
+    at: 'in the middle in front of our box',
+    move: 'get open in the middle and call for the ball',
+    spotWhy: "In front of our box, you're the keeper's middle option, between the two wide defenders.",
+    moveWhy: "If you hide behind their striker, the keeper only has two options. Get open and there are three.",
+    kid: ['Stand in the middle, just in front of our big box.', 'Get open, and call for the ball.', 'The keeper needs someone to pass to in the middle. Be that player!'],
+  },
+  ogkW: {
+    at: 'wide by the touchline',
+    move: 'stay wide, ready to get the ball and run',
+    spotWhy: 'On our goal kick, the wingers stay wide by the touchline, where there is lots of space.',
+    moveWhy: 'Out wide there is space to get the ball and run. Come into the middle and it is crowded.',
+    kid: ['Go out wide, near the side line.', 'Wait out wide, ready to get the ball and run with it.', 'There is lots of empty space out wide.'],
+  },
+  ogkST: {
+    at: 'high up in the middle',
+    move: 'stay high to push their defenders back',
+    spotWhy: 'Staying high pushes their defenders back and leaves more space for our players to get the ball.',
+    moveWhy: 'If you come back for the ball, their defenders follow you and squeeze the space we need to build out.',
+    kid: ['Stay far up the field, in the middle.', "Stay up high. Don't come back for the ball.", 'Their defenders have to stay with you, so your teammates get more room.'],
+  },
+  tgkGK: {
+    at: 'at the top of your box',
+    move: 'be ready to rush out and smash away a long kick',
+    spotWhy: 'Our team is pushed right up to the build-out line, so there is a big space behind. From the top of your box, you can sweep it.',
+    moveWhy: 'If their keeper kicks it long over everyone, you have to get there first.',
+    kid: ['Stand at the front of your big box.', 'If their keeper kicks it long, run out and kick it away.', 'Our team has moved up the field, so you guard the space behind them.'],
+  },
+  tgkD: {
+    at: 'goal-side of their striker',
+    move: 'attack any long kick and win it',
+    spotWhy: "On their goal kick, stay between their striker and our goal, so a long kick can't get in behind you.",
+    moveWhy: "Win the long ball and they can't get their attack going. If you just watch the kick, their striker wins it.",
+    kid: ['Stand between their striker and our goal.', 'If they kick it long, run to it and win it.', "If you are between their striker and our goal, they can't get past you."],
+  },
+  tgkCM: {
+    at: 'just behind our front three',
+    move: 'pounce on any pass into the middle',
+    spotWhy: "Our three attackers press their defenders. From just behind them, you're ready for any pass they try into the middle.",
+    moveWhy: 'If they pass into the middle and you pounce, we win it right in front of their goal.',
+    kid: ['Stand in the middle, just behind our three attackers.', 'If they pass it into the middle, run in and steal it.', 'If you steal it there, we are very close to their goal!'],
+  },
+  tgkW: {
+    at: 'right at the build-out line on your side',
+    move: 'sprint at their defender the second the keeper passes',
+    spotWhy: "We have to wait behind the build-out line until their keeper passes. Right up at it, you're the closest when we're allowed to go.",
+    moveWhy: 'Pressing the second the keeper passes wins the ball near their goal. If you wait and watch, they get time to play.',
+    kid: ["Stand right at the dotted line on your side. Don't cross it yet!", 'As soon as their keeper passes, run at the player who gets the ball.', 'If you are fast, you can win the ball right next to their goal.'],
+  },
+  tgkST: {
+    at: 'right at the build-out line in the middle',
+    move: 'sprint at the ball the second the keeper passes',
+    spotWhy: "We have to wait behind the build-out line until their keeper passes. Right up at it, you're the closest to the ball the moment we're allowed to go.",
+    moveWhy: 'Pressing the second the keeper passes wins the ball near their goal. If you walk back, they get time to play.',
+    kid: ["Stand right at the dotted line, in the middle. Don't cross it yet!", 'As soon as their keeper passes, run at the ball.', 'If you are quick, you can win the ball near their goal and score!'],
+  },
+};
+// These jobs already explain the turnover themselves, so they skip the phase lead.
+const OWN_LEAD = new Set(['loser', 'loserGK', 'help', 'counter', 'loose', 'looseHelp']);
+for (const k in JOBS) if (!TALK[k]) console.warn('Missing feedback words for job', k);
 
 const PHASES = {
   ourGK:   { cat: 'gk',    we: true,  icon: '🥅' },
@@ -969,6 +1360,65 @@ function tipFor(sit, role, zone) {
   if (sit.phase === 'loose' && zone.job !== 'loose') return 'Loose ball! ' + tip;
   if (sit.phase === 'won') return 'We won it! ' + tip;
   return tip;
+}
+
+// Why the spot matters right after the ball changes hands.
+function phaseLead(sit, z) {
+  if (OWN_LEAD.has(z.job)) return '';
+  if (sit.phase === 'lost') return z.y < sit.ball.y - 1
+    ? 'On a turnover, we want to get back behind the ball straight away, so we can stop their player running at our goal.'
+    : 'On a turnover, everyone switches to defending straight away.';
+  if (sit.phase === 'loose') return 'When the ball pops loose, the closest players attack it and everyone else gets ready in case they win it.';
+  if (sit.phase === 'won') return 'We just won it, so everyone switches to attacking straight away.';
+  return '';
+}
+// The situation in plain words, for when both answers were wrong.
+function kidIntro(sit, role) {
+  switch (sit.phase) {
+    case 'ourGK': return "It's our goal kick. Our keeper is going to pass it to one of us.";
+    case 'theirGK': return "It's their goal kick. We have to wait behind the dotted build-out line until their keeper passes.";
+    case 'attack': return 'Our team has the ball.';
+    case 'defend': return 'The other team has the ball.';
+    case 'lost': return sit.carrier === role ? "You just lost the ball. That's OK, it happens to everyone!" : 'We just lost the ball, so now the other team has it.';
+    case 'won': return 'We just won the ball! Now our team is attacking.';
+    case 'loose': return "Nobody has the ball. It's up for grabs!";
+  }
+  return '';
+}
+/* One message for the whole answer:
+     both right  → a single line that sums up the spot and the move
+     one right   → say yes to that part, then why the other part matters
+     both wrong  → a short, simple lesson: where to stand, what to do, why */
+function feedbackFor(q, moveOk) {
+  const t = TALK[q.zone.job], s = q.spot.stars, spotOk = s >= 2;
+  const place = s === SPOT_MAX ? 'the right place to be' : 'about the right place to be';
+  if (spotOk && moveOk) return {
+    kind: 'good', spotOk, title: s === SPOT_MAX ? 'Correct! 🎉' : 'Correct! 👍',
+    lines: [`That's ${place}, ${t.at}, and the right move is to ${t.move}.`],
+  };
+  if (spotOk) return {
+    kind: 'half', spotOk, title: 'Half right 👍',
+    lines: [`Yes, that's ${place}. But the right move is to ${t.move}. ${t.moveWhy}`],
+  };
+  if (moveOk) {
+    const wrong = q.spot.off ? "But you'd be off the pitch!"
+      : q.spot.crossed ? "But you'd be over the build-out line, and that's not allowed until their keeper passes."
+      : "But you'd be in the wrong place.";
+    return {
+      kind: 'half', spotOk, title: 'Half right 👍',
+      lines: [[`Yes, you chose the right move. ${wrong} The best spot is ${t.at}.`, phaseLead(q.sit, q.zone), t.spotWhy].filter(Boolean).join(' ')],
+    };
+  }
+  const [where, todo, why] = t.kid;
+  return {
+    kind: 'learn', spotOk, title: "Let's learn this one 💡",
+    lines: [
+      (q.spot.off ? 'Oops, that spot was off the pitch! ' : '') + kidIntro(q.sit, q.role),
+      { ico: '📍', label: 'Where to stand:', text: `${where} Look for the yellow box.` },
+      { ico: '⚡', label: 'What to do:', text: todo },
+      { ico: '💡', label: 'Why:', text: why },
+    ],
+  };
 }
 
 /* ---------------- SVG drawing ---------------- */
@@ -1408,6 +1858,7 @@ function showPanel(which) {
   $('#fbAct').hidden = which !== 'act';
   $('#fbPost').hidden = which !== 'post';
   $('#fbCoach').hidden = which !== 'coach';
+  $('#qprompt').hidden = which === 'post'; // once answered, the answer box says it all
   $('#fb').classList.toggle('pre', which === 'pre');
   $('#fb').classList.toggle('act', which === 'act');
 }
@@ -1520,7 +1971,7 @@ function answer(i) {
   const q = cur();
   if (!q || state.step !== 'act') return;
   state.step = 'done';
-  const f = q.frame, sit = q.sit, z = q.zone, job = JOBS[z.job], p = Q.youPos;
+  const f = q.frame, z = q.zone, p = Q.youPos;
   const moveOk = q.options[i].ok;
   const total = q.spot.stars + (moveOk ? MOVE_POINTS : 0);
   q.stars = total;
@@ -1539,33 +1990,40 @@ function answer(i) {
   }
   if (q.spot.stars < 3) drawArrow(p, z);
 
-  const title = total === Q_MAX ? 'Perfect! 🎉' : total >= 4 ? 'Great job! 👍' : total >= 2 ? 'Getting there 🙂' : 'Not quite 👀';
-  const tip = tipFor(sit, q.role, z);
-  const s = q.spot.stars;
-  const spotWord = q.spot.off ? "That's off the pitch!" : q.spot.crossed ? 'Too far! Wait behind the line until the kick.' : ['Not quite.', 'Getting there.', 'Close!', 'Spot on!'][s];
-  const spotText = `${spotWord} ${tip}`;
-  const moveText = moveOk ? `Right! ${job.why}` : `Best move: ${sentence(job.act)} ${job.why}`;
-
-  const vt = $('#vTitle');
-  vt.textContent = title;
-  vt.className = 'v' + (total >= 5 ? 5 : total >= 3 ? 3 : total >= 1 ? 1 : 0);
+  const fb = feedbackFor(q, moveOk);
+  $('#answer').className = 'answer ' + fb.kind;
+  $('#vTitle').textContent = fb.title;
   $('#vScore').textContent = `⭐ ${total}/${Q_MAX}`;
-  $('#rowSpot').className = 'res-row ' + (s === 3 ? 'good' : s > 0 ? 'meh' : 'bad');
-  $('#spotIco').textContent = s === 3 ? '✅' : s > 0 ? '🟡' : '❌';
-  $('#spotHead').textContent = `Your spot ${'⭐'.repeat(s)}`;
-  $('#spotText').textContent = spotText;
-  $('#rowMove').className = 'res-row ' + (moveOk ? 'good' : 'bad');
-  $('#moveIco').textContent = moveOk ? '✅' : '❌';
-  $('#moveHead').textContent = `Your move ${moveOk ? '⭐⭐' : ''}`;
-  $('#moveText').textContent = moveText;
-  $('#showMeBtn').hidden = s === 3;
+  $('#chkSpot').textContent = `📍 Spot ${fb.spotOk ? '✅' : '❌'}`;
+  $('#chkMove').textContent = `⚡ Move ${moveOk ? '✅' : '❌'}`;
+  const body = $('#answerBody');
+  body.textContent = '';
+  const said = [];
+  for (const line of fb.lines) {
+    const p = document.createElement('p');
+    if (typeof line === 'string') {
+      p.textContent = line;
+      said.push(line);
+    } else {
+      p.className = 'lesson';
+      const ico = document.createElement('span'), words = document.createElement('span'), b = document.createElement('b');
+      ico.className = 'ico';
+      ico.textContent = line.ico;
+      b.textContent = line.label;
+      words.append(b, ' ' + line.text);
+      p.append(ico, words);
+      said.push(`${line.label} ${line.text}`);
+    }
+    body.appendChild(p);
+  }
+  $('#showMeBtn').hidden = q.spot.stars === SPOT_MAX;
   $('#teamBtn').textContent = '👥 Team';
   $('#nextBtn').textContent = state.i + 1 < state.round.length ? 'Next ➜' : 'Score 🏆';
   $('#starTotal').textContent = state.stars;
   showPanel('post');
   renderDots();
 
-  Q.sayResult = `${title} Your spot: ${spotText} Your move: ${moveText}`;
+  Q.sayResult = `${fb.title} ${said.join(' ')}`;
   speak(Q.sayResult);
   if (total === Q_MAX) confetti(40);
   $('#nextBtn').focus({ preventScroll: true });
