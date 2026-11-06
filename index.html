@@ -370,6 +370,57 @@ svg text { font-family: inherit; }
 .pick:focus { outline: none; }
 .pick:focus-visible .body { stroke: #fde047; stroke-width: .65; }
 
+/* attacking scenes: zoomed in on their box, landscape */
+.quiz.zoom .pitch-box {
+  width: max(12rem, min(calc(100vw - var(--cw) - 4rem), calc((100vh - 5.5rem) * 45 / 27.6)));
+  width: max(12rem, min(calc(100cqw - var(--cw) - 1.25rem), calc((100dvh - 5.5rem) * 45 / 27.6)));
+}
+@media (orientation: portrait), (max-width: 600px) {
+  /* phones held upright: watch the play at the top, then read and answer below it */
+  .quiz.zoom { grid-template-areas: "pitch" "legend" "q" "fb"; }
+  .quiz.zoom .pitch-box { width: 100%; }
+  .quiz.zoom .fbcard.pre, .quiz.zoom .fbcard.act { position: static; padding: 0.75rem; }
+  .quiz.zoom .options { gap: 0.4375rem; }
+  .quiz.zoom .opt { font-size: 1rem; padding: 0.5rem 0.625rem; gap: 0.5rem; }
+  .quiz.zoom .opt .letter { width: 1.75rem; height: 1.75rem; }
+  .quiz.zoom .qtext { font-size: 1.25rem; }
+}
+.btrail { fill: none; stroke: #fde047; stroke-width: .3; stroke-dasharray: .05 .55; stroke-linecap: round; }
+.ball-shadow { fill: rgba(0, 0, 0, .45); }
+.aim-line { fill: none; stroke: #fff; stroke-width: .2; stroke-dasharray: .6 .4; pointer-events: none; }
+.aim-mark { cursor: grab; }
+.aim-mark:focus { outline: none; }
+.aim-mark .ring { fill: rgba(253, 224, 71, .28); stroke: #fde047; stroke-width: .22; }
+.aim-mark:focus-visible .ring { stroke-width: .4; }
+.aim-mark.small .ring { stroke-width: .06; }
+.aim-mark.small:focus-visible .ring { stroke-width: .1; }
+.target-ring { fill: rgba(74, 222, 128, .18); stroke: #4ade80; stroke-width: .3; stroke-dasharray: .7 .4; }
+.best-arrow { stroke: #4ade80; stroke-width: .34; stroke-dasharray: .8 .5; fill: none; }
+/* the goal seen from the shooter's spot */
+.gf-sky { fill: #bfdbfe; }
+.gf-far { fill: #2a7f3f; }
+.gf-grass { fill: #33964b; }
+.gf-stripe { fill: #2e8b45; }
+.gf-net { fill: rgba(255, 255, 255, .12); }
+.gf-mesh { stroke: rgba(255, 255, 255, .5); stroke-width: .025; }
+.gf-post { fill: #fff; stroke: #cbd5e1; stroke-width: .02; }
+.gf-line { stroke: #fff; stroke-width: .05; }
+.gk-kit { fill: #f97316; stroke: #9a3412; stroke-width: .03; }
+.gk-skin { fill: #f2c9a0; stroke: #8a5a3c; stroke-width: .02; }
+.gk-arm { fill: none; stroke: #f97316; stroke-width: .13; stroke-linecap: round; }
+.gk-glove { fill: #fde047; stroke: #a16207; stroke-width: .02; }
+.gk-shorts { fill: #1f2937; }
+.gf-good { fill: rgba(74, 222, 128, .38); stroke: #22c55e; stroke-width: .04; stroke-dasharray: .12 .08; }
+.gf-hint { fill: #1e3a8a; font-size: .3px; font-weight: 700; }
+.qbtns { display: flex; gap: 0.375rem; flex: none; }
+/* the "look up!" sweep before a loose-ball decision */
+.scan-ring { fill: rgba(253, 224, 71, .14); stroke: #fde047; stroke-width: .3; opacity: 0; transform-box: fill-box; transform-origin: center; animation: scanPulse .9s ease-out forwards; }
+@keyframes scanPulse { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
+.scan-lbl { fill: #fff; font-size: 1.5px; font-weight: 700; paint-order: stroke; stroke: rgba(15, 23, 42, .65); stroke-width: .35px; }
+@media (prefers-reduced-motion: reduce) { .scan-ring { animation: none; opacity: .9; } }
+.lg.path { width: 1.25rem; height: 0; border-radius: 0; border-top: 0.1875rem dotted #eab308; }
+.note { font-size: 0.9375rem; color: var(--muted); margin-top: -0.375rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .zone, .you-pulse { animation: none; }
 }
@@ -403,7 +454,9 @@ svg text { font-family: inherit; }
           <label class="toggle"><input type="checkbox" value="gk" checked><span>🥅 Goal kicks</span></label>
           <label class="toggle"><input type="checkbox" value="open" checked><span>⚡ Open play</span></label>
           <label class="toggle"><input type="checkbox" value="trans" checked><span>🔄 Transitions</span></label>
+          <label class="toggle"><input type="checkbox" value="box" checked><span>🎯 Shooting &amp; crossing</span></label>
         </div>
+        <p class="note" id="boxNote" hidden>🎯 Shooting &amp; crossing is for the Center Mid, the wings and the Striker.</p>
         <label class="switch"><input type="checkbox" id="hardInput"><span class="track"></span><span>Hard mode (hide teammates)</span></label>
         <button class="btn primary big wide" id="startBtn" type="button">Play ⚽</button>
         <button class="btn ghost small wide" id="coachBtn" type="button">👀 Coach view</button>
@@ -423,7 +476,10 @@ svg text { font-family: inherit; }
           <p class="step-tag" id="stepTag"></p>
           <div class="qline">
             <h2 class="qtext" id="qtext" aria-live="polite"></h2>
-            <button class="icon-btn" id="readBtn" type="button" aria-label="Say it again">🔊</button>
+            <span class="qbtns">
+              <button class="icon-btn" id="replayBtn" type="button" aria-label="Watch it again" title="Watch it again" hidden>🔁</button>
+              <button class="icon-btn" id="readBtn" type="button" aria-label="Say it again">🔊</button>
+            </span>
           </div>
         </div>
       </div>
@@ -436,6 +492,7 @@ svg text { font-family: inherit; }
         <span><i class="lg white"></i>Them</span>
         <span><i class="lg you"></i>You</span>
         <span><i class="lg zone"></i>Best spot</span>
+        <span id="lgPath" hidden><i class="lg path"></i>Ball's path</span>
       </div>
 
       <div class="card fbcard" id="fb">
@@ -580,7 +637,7 @@ const JOBS = {
   cmShow: { tip: 'Find space in the middle.', act: 'Find space and call for the ball', wrong: ['Hide behind one of their players', 'Run all the way up to their box'] },
   cmSupport: { tip: 'Get forward next to the ball.', act: "Find space near the ball so you're an easy pass", wrong: ['Stand far away from the play', 'Run back to our box'] },
   cmEdge: { tip: 'Edge of their box.', act: 'Be ready to shoot or win any ball that pops out', wrong: ['Jog back to the halfway line', 'Run into the crowd next to the ball'] },
-  stTarget: { tip: 'Stay high in the middle.', act: 'Stay high and call for the long pass', wrong: ['Come all the way back for the ball', 'Stand next to our defender'] },
+  stTarget: { tip: 'High in the middle, level with their last defender.', act: 'Stay high and call for the long pass', wrong: ['Come all the way back for the ball', 'Stand next to our defender'] },
   stRun: { tip: 'Furthest forward, level with their last defender.', act: 'Make a run behind their defenders for a through ball', wrong: ['Walk back toward our goal', 'Stand still and wait'] },
   stBox: { tip: 'In the box, in front of goal.', act: 'Find space in front of goal, ready to shoot', wrong: ['Run out to the corner flag', 'Stop and watch the ball'] },
   wingBackPost: { tip: 'Back post!', act: 'Sprint to the back post for the cross', wrong: ['Stay out on the touchline', 'Run over to the ball to help'] },
@@ -701,16 +758,16 @@ const TALK = {
     kid: ['Stand just outside their big box.', 'Be ready to shoot if the ball comes to you.', 'When they block a shot, the ball often bounces out to right there. Be ready to shoot it again!'],
   },
   stTarget: {
-    at: 'high up in the middle',
+    at: 'high up in the middle, level with their last defender',
     move: 'stay high and call for the long pass',
     spotWhy: 'Staying high pins their defenders back. That gives us space in the middle and a long pass to aim for.',
     moveWhy: "If you come all the way back, their defenders push up and squeeze us. Up high, you're a target for the long pass.",
-    kid: ['Stay far up the field, in the middle.', 'Shout for a long pass.', 'If you stay up high, their defenders have to stay back to watch you. That gives your team more room.'],
+    kid: ['Stay far up the field in the middle, level with their last defender.', 'Shout for a long pass.', 'If you stay up high, their defenders have to stay back to watch you. That gives your team more room.'],
   },
   stRun: {
     at: 'level with their last defender',
     move: 'make a run behind their defenders for a through ball',
-    spotWhy: "Level with their last defender, you're one quick step from running in behind them.",
+    spotWhy: "Level with their last defender, you're one quick step from running in behind them. Any further and you'd be offside.",
     moveWhy: "A run in behind scares their defenders. Even if the pass doesn't come, it pushes them back and makes space for our midfielders.",
     kid: ['Stand next to their last defender, the one closest to their goal.', 'Run past them into the empty space, so we can pass the ball ahead of you.', 'If you get behind their defenders, only the keeper is left to beat!'],
   },
@@ -1082,6 +1139,975 @@ const SITUATIONS = [
 ];
 
 /* ------------------------------------------------------------------
+   Shooting & crossing. Attacking moments drawn on a zoomed-in view of
+   their box, for the Center Mid, the wings and the Striker. Same
+   coordinates as everywhere else (their goal line is y = 60, the goal
+   is x 17–23, their box is x 8–32 from y 48).
+     pill – what's happening. Past tense, so "{RW} dribbled…" reads
+            right as "You dribbled…" too. {LW} {RW} {ST} {CM} become
+            "you" or "our Left Wing" and so on.
+     at   – where everyone starts. Blue: LW ST RW CM. White: K is their
+            keeper, a–f their other players. And the ball.
+     play – the lead-up, as beats { ms, id: [x, y], …, air }. Each beat
+            moves the listed players and ball in a straight line; air
+            lifts the ball (a high cross or a bounce).
+     ask  – one question per position:
+            from  – where YOU are when it freezes (you walk there instead
+                    of following the play, so the answer isn't given away)
+            steps – one or two of:
+              choose – opts [text, grade, why, show]: grade 2 right, 1 OK, 0 wrong. More than
+                       one option can be right; the answer box then names the other one too.
+                       show (best option only): where Show me plays the ball, a player or 'goal'
+              place  – zones [x, y, half-width, half-height], where, why,
+                       traps [x1, y1, x2, y2, why] for tempting wrong spots
+              aim    – drag the ball. targets { to: player | at: [x, y],
+                       r, g, text, why } or { goal: true, g, why }
+              shot   – aim inside the goal. kx: keeper across the goal,
+                       0 = left post, 6 = right post. big: keeper rushing out
+              A later step can start with its own play (the action goes on),
+              or with scan: a look-up sweep across teammates and the goal.
+            good  – one line for getting every step right (two-step asks)
+            tags  – 'byline' or 'loose': a game always includes some of each
+            rule  – a RULES key: the one thing to remember. A step can have its own
+                    rule; the answer box shows the rule for the first step you missed
+   Scenes are written with the ball on the right. Each also plays
+   mirrored, so wingers get both sides and the rest get variety.
+   Nobody heads the ball: no heading in U10 soccer.
+------------------------------------------------------------------- */
+const RULES = {
+  touch: 'Fast or bouncing ball? Take a touch first, then shoot.',
+  tapin: 'Slow ball right in front of goal? Tap it in first time.',
+  pass: 'Look up! If a teammate has a better chance, pass it.',
+  scan: 'Ball in the box? Control it, look up, then shoot or pass.',
+  sight: 'Look up: clear sight of goal? Shoot! Blocked? Pass.',
+  low: 'Stay calm and aim low, away from the keeper.',
+  cutback: 'Defender blocking the byline? Pass it back, or turn back inside past them.',
+  nearpost: 'Winger at the byline? Strikers attack the near post.',
+  cutspot: 'Winger at the byline? Wait for the cut-back around the penalty spot.',
+  level: 'Teammate through on goal? Run level with them, not ahead.',
+  support: 'Teammate with their back to goal? Get close behind them, facing the goal.',
+  backpost: 'Ball on the other wing? Get to the back post.',
+  space: 'Find a space away from your defender.',
+  follow: 'Always follow a shot in for the rebound.',
+  ahead: 'Pass into the space ahead of a runner.',
+  run: 'Wait level with their last defender, then run in behind when the pass is played.',
+  away: 'Take your first touch away from the defender.',
+  turn: 'Defender on your back? Pass it back, or turn them and go.',
+  carry: 'Space in front of you? Carry the ball closer.',
+  corner: 'Corners: aim for a teammate in space, never at the keeper.',
+  short: "Everyone marked at a corner? Come short and help.",
+  switch: 'Crowded on one side? Switch it to the other.',
+};
+const BOX_ROLES = ['CM', 'LW', 'RW', 'ST'];
+const BOX = [
+  { // winger at the byline, defender blocks the cross: cut it back
+    id: 'cutback',
+    pill: '{RW} dribbled all the way to the byline',
+    at: {
+      RW: [31.5, 44.5], ball: [32.1, 45.9], ST: [21, 46.5], CM: [20, 40.5], LW: [8, 45],
+      K: [20, 59.2], a: [29, 48.5], b: [21.5, 49.5], c: [11, 49], d: [23.5, 43],
+    },
+    play: [{ ms: 2000, RW: [36.6, 57.2], ball: [37.4, 58.5], a: [33.6, 58.4], K: [22.8, 59.4], ST: [22.6, 55.6], b: [21.4, 57.9], LW: [15, 53.8], c: [16, 56.2], CM: [24, 49.6], d: [26.6, 45.4] }],
+    ask: {
+      RW: {
+        rule: 'cutback', tags: ['byline'],
+        steps: [{
+          type: 'choose', q: "You're at the byline, and their defender is blocking the way. What should you do?",
+          opts: [
+            ['Pass it back to {CM} at the penalty spot (a cut-back pass)', 2, "Their defender is blocking the way to goal, but {CM} is all alone behind the play, facing the goal. Passes back like this score loads of goals.", 'CM'],
+            ['Stop, turn back inside, and dribble past your defender', 2, "Their defender is guarding the byline, so turn away from them, back inside. Now you're dribbling into the box with a much better angle to shoot or pass."],
+            ['Cross it hard across the front of the goal', 0, "Their defender is standing right in the way of that cross, and {ST} is marked. It would get blocked."],
+            ['Shoot from where you are', 0, "From the byline the goal is tiny, and their keeper is guarding the near post. You'd hit the keeper or the side netting."],
+            ['Keep dribbling along the byline toward goal', 0, "Their defender is right in front of you on the byline. You'd run straight into them and lose the ball."],
+          ],
+        }],
+      },
+      CM: {
+        from: [21.5, 43.5], rule: 'cutspot',
+        good: "You found the cut-back spot, and a touch first sets you up to score.",
+        steps: [{
+          type: 'place', rule: 'cutspot', q: '{RW} reached the byline. Where should you be?',
+          zones: [[24, 50, 3, 2.5]],
+          where: 'Around the penalty spot, a few steps back from the crowd',
+          why: "When a winger reaches the byline, their defenders all run back toward the goal. That leaves space behind them, around the penalty spot. That's where the cut-back goes.",
+          traps: [[14, 55, 26, 61, "The six-yard box is packed with defenders and their keeper. Stay a few steps back, where the cut-back can find you."]],
+        }, {
+          type: 'choose', rule: 'touch', q: "{RW} cuts it back to you. It's rolling nicely. What do you do?",
+          opts: [
+            ['Take a touch to set it, then shoot low', 2, "You're not right on the goal line, so one touch to set the ball lets you pick your spot and keep it low."],
+            ['Smash it first time as hard as you can', 0, "It's not a tap-in. Swinging at it first time is how shots fly over the bar."],
+            ['Pass it back out to {RW}', 0, "You're in the best spot on the pitch, facing the goal. This is your chance to shoot!"],
+          ],
+        }],
+      },
+      ST: {
+        from: [21, 48.4], rule: 'nearpost',
+        steps: [{
+          type: 'place', q: '{RW} is racing to the byline. Where should you run?',
+          zones: [[23, 55.8, 2.2, 2]],
+          where: 'To the near post, in front of the goal',
+          why: "Attack the near post! You might get a pass to tap in, and if you don't, you drag a defender with you and open up space behind you for a cut-back.",
+          traps: [[16, 46, 26, 51, "Standing still around the penalty spot makes you easy to mark, and it takes the cut-back space from {CM}."]],
+        }],
+      },
+    },
+  },
+  { // winger at the byline, teammate free at the back post: low cross
+    id: 'backpost',
+    pill: '{RW} burst past their defender to the byline',
+    at: {
+      RW: [33, 46], ball: [33.6, 47.4], ST: [20, 46.5], CM: [21.5, 40], LW: [9, 44],
+      K: [20, 59.2], a: [31, 48.5], b: [21, 49], c: [27.5, 47.5], d: [23.5, 42.5],
+    },
+    play: [{ ms: 1900, RW: [36.8, 56.6], ball: [37.4, 58], a: [34.6, 54.2], K: [22.4, 59.2], ST: [25.6, 52.2], b: [25.2, 54.6], c: [29.6, 49.6], LW: [16.6, 55.6], CM: [23, 47.6], d: [23.4, 50.2] }],
+    ask: {
+      RW: {
+        rule: 'pass', tags: ['byline'],
+        steps: [{
+          type: 'aim', q: "You're at the byline. Drag the ball to where it should go.",
+          targets: [
+            { to: 'LW', r: 2.8, g: 2, text: 'Play a low cross to {LW} at the back post', why: "{LW} is all alone at the back post. A low ball across the goal, and it's an easy tap-in." },
+            { goal: true, g: 0, why: "From the byline the goal is tiny, and their keeper is guarding the near post. Shots from here almost never go in." },
+            { to: 'ST', r: 2, g: 0, why: "{ST} has a defender right on them, so that pass would get cut out." },
+            { to: 'CM', r: 2, g: 1, why: "Not a bad pass, but {CM} is marked and further out. {LW} had an easy tap-in." },
+          ],
+        }],
+      },
+      LW: {
+        from: [10, 47.5], rule: 'backpost',
+        good: 'Back post, then tap it in. That is how wingers score!',
+        steps: [{
+          type: 'place', rule: 'backpost', q: '{RW} reached the byline on the other side. Where should you be?',
+          zones: [[16.6, 55.6, 2, 2.2]],
+          where: 'At the back post',
+          why: "Crosses that fly past everyone end up at the back post. Get there, and you'll often have an easy tap-in.",
+          traps: [[0, 36, 8, 61, "Out by the touchline you're too far away to score. When the ball is on the other wing, get into the box."]],
+        }, {
+          type: 'choose', rule: 'tapin', q: 'The cross rolls slowly across, right in front of the open goal. What do you do?',
+          opts: [
+            ['Tap it in first time', 2, "Slow ball, right in front of an open goal: just side-foot it in. No need to stop it!"],
+            ['Stop it first, then shoot', 1, "Usually a touch first is smart, but stopping a slow ball right in front of goal gives their keeper time to get across."],
+            ['Blast it as hard as you can', 0, "You're so close you don't need power. Blasting it is how easy chances go over the bar."],
+          ],
+        }],
+      },
+    },
+  },
+  { // winger at the byline with nobody there yet: carry it in, then pass
+    id: 'dribble',
+    pill: '{RW} raced past their defender toward the byline',
+    at: {
+      RW: [33, 48], ball: [33.5, 49.4], ST: [19, 42], CM: [22, 38.5], LW: [10, 44],
+      K: [20, 59.2], a: [31, 47.5], b: [13.5, 47.5], c: [19.5, 44.5],
+    },
+    play: [{ ms: 1800, RW: [36, 56.2], ball: [36.5, 57.6], a: [33, 52.4], K: [22.3, 59.2], ST: [19.2, 47.4], c: [19.6, 49.8], LW: [12, 49], b: [13.2, 51.2], CM: [22, 42] }],
+    ask: {
+      RW: {
+        rule: 'carry', tags: ['byline'],
+        good: 'Dribble in, then pass! Using the space pulled their keeper out, and {ST} had an open goal.',
+        steps: [{
+          type: 'choose', q: 'Nobody is in the box yet, and your defender is behind you. What should you do?',
+          opts: [
+            ['Dribble toward the goal', 2, "There's nobody in front of you, and your teammates aren't there yet. Carry the ball closer to goal. That makes the pass or shot easier and gives your teammates time to arrive."],
+            ['Cross it right away', 0, "Nobody is in the box yet, so a cross now goes straight to their keeper or a defender."],
+            ['Shoot from here', 0, "The angle is way too tight from out here, and their keeper is guarding the near post."],
+            ['Cut it back', 0, "There's no teammate behind you yet to cut it back to. Use the space in front of you first."],
+          ],
+        }, {
+          type: 'aim', rule: 'pass', q: 'You dribble in, and their keeper rushes out at you. Drag the ball to where it should go now.',
+          play: [{ ms: 1500, RW: [29.6, 57.2], ball: [28.4, 57.6], K: [24.8, 58.2], ST: [20.6, 52], c: [17.4, 49.8], a: [31.6, 55.6], LW: [15, 54.4], b: [15.6, 56.6], CM: [22, 45.5] }],
+          targets: [
+            { to: 'ST', r: 2.6, g: 2, text: 'Pass it to {ST} in front of goal', why: "Their keeper came out to you, so {ST} has a clear sight of an open goal. That's the pass!" },
+            { goal: true, g: 0, why: "Their keeper is right in front of you, blocking the shot." },
+            { to: 'LW', r: 2, g: 0, why: "{LW} has a defender right next to them." },
+            { to: 'CM', r: 2, g: 1, why: "Not bad, but {CM} is further out. {ST} was in front of an open goal." },
+          ],
+        }],
+      },
+    },
+  },
+  { // winger cuts inside with a clear sight of goal: shoot
+    id: 'cutinShoot',
+    pill: '{RW} got the ball near the corner of their box',
+    at: {
+      RW: [33.5, 44.5], ball: [32.6, 45.6], ST: [17.5, 49.5], CM: [24, 38.5], LW: [10.5, 48.5],
+      K: [20, 59.2], a: [30.5, 46.5], b: [18, 52.2], c: [12, 51.2], d: [24.5, 41],
+    },
+    play: [{ ms: 1600, RW: [27.6, 49.4], ball: [26.8, 50.6], a: [31.2, 48.6], K: [21.2, 59.1], ST: [16.4, 53.6], b: [16.8, 55.8], LW: [10, 53], c: [11.4, 55], CM: [24.2, 42.5], d: [24.4, 45] }],
+    ask: {
+      RW: {
+        rule: 'sight',
+        good: 'You saw the chance, set it with a touch, and aimed low away from the keeper.',
+        steps: [{
+          type: 'choose', q: "You've cut inside past your defender. What should you do?",
+          opts: [
+            ['Take a touch to set it, then shoot', 2, "You've got a clear sight of goal, and your teammates are marked. That's a shooting chance! A touch to set it helps you hit the target."],
+            ['Pass it back to {CM}', 1, "That's a safe pass, but {CM} is further away and marked. You had the better chance."],
+            ['Dribble out to the byline', 0, "That takes you away from the goal. You've got a shooting chance right now!"],
+          ],
+        }, { type: 'shot', kx: 4.2 }],
+      },
+    },
+  },
+  { // winger cuts inside but two defenders block the shot: pass
+    id: 'cutinPass',
+    pill: '{RW} dribbled in from the wing',
+    at: {
+      RW: [34, 45.5], ball: [33.2, 46.6], ST: [16.5, 47.5], CM: [22, 39], LW: [9, 46.5],
+      K: [20, 59.2], a: [31, 48], e: [28, 51.5], b: [18.5, 50.5], c: [10.5, 49.5], d: [23.5, 41.5],
+    },
+    play: [{ ms: 1600, RW: [29.8, 48.6], ball: [29, 49.6], a: [27.2, 52.2], e: [25.4, 54], K: [21.4, 59.2], ST: [16, 51.6], b: [20.6, 56.2], LW: [9.4, 51.8], c: [10.8, 54], CM: [22.2, 44.6], d: [23.6, 46.8] }],
+    ask: {
+      RW: {
+        rule: 'sight',
+        steps: [{
+          type: 'aim', q: 'Two defenders are in your way. Drag the ball to where it should go.',
+          targets: [
+            { to: 'ST', r: 2.8, g: 2, text: 'Pass it to {ST}, free in the box', why: "{ST} is free in the box with a clear sight of goal. That's a much better chance than shooting through two defenders." },
+            { goal: true, g: 0, why: "Two defenders are standing between you and the goal. Your shot would smack into them." },
+            { to: 'CM', r: 2, g: 1, why: "A safe pass, but {CM} is further out and marked. {ST} had the better chance." },
+            { to: 'LW', r: 2, g: 0, why: "{LW} has a defender right next to them, and the pass goes through the crowd." },
+          ],
+        }],
+      },
+    },
+  },
+  { // fast cross straight to the striker: trap it first
+    id: 'fastCross',
+    pill: '{RW} drove a hard, fast cross into the box',
+    at: {
+      RW: [36, 52], ball: [36.6, 53.4], ST: [21.5, 47.5], CM: [22, 40], LW: [11, 47],
+      K: [20.5, 59.2], a: [34, 49.8], b: [21.8, 50], c: [12.2, 49.4], d: [23, 42.5],
+    },
+    play: [
+      { ms: 800, ST: [21.2, 51.4], b: [19.8, 54.2], K: [21.4, 59.2], LW: [12.6, 51.4], c: [13.6, 53.6], CM: [22.4, 43.5], d: [23.4, 45.8], a: [34, 50.2] },
+      { ms: 550, ball: [22.6, 51.8] },
+    ],
+    ask: {
+      ST: {
+        rule: 'touch',
+        good: 'Touch, then a low shot into the open side. That is how you beat a fast cross.',
+        steps: [{
+          type: 'choose', q: "The cross is coming in fast, straight to you. What do you do?",
+          opts: [
+            ['Take a touch away from your defender, then shoot', 2, "It's a fast ball, so swinging at it first time usually sends it wide or over. One good touch to control it, away from your defender, then shoot."],
+            ['Hit it first time as hard as you can', 0, "A fast ball is really hard to hit cleanly first time. That's how shots end up way over the bar or wide."],
+            ['Let it run past you to {LW}', 0, "You're in the best spot in front of goal. Don't let it go! Control it and shoot."],
+          ],
+        }, { type: 'shot', kx: 4.4 }],
+      },
+    },
+  },
+  { // slow ball across the six-yard box: tap it in
+    id: 'tapIn',
+    pill: '{RW} rolled the ball back across the goal',
+    at: {
+      RW: [35, 53.5], ball: [35.6, 54.8], ST: [24, 49.5], CM: [23, 42], LW: [12, 48.5],
+      K: [21.5, 59.2], a: [33, 53.2], b: [24.6, 51.8], c: [13.2, 50.8], d: [24.5, 44.5],
+    },
+    play: [
+      { ms: 1000, RW: [36.4, 56.8], ball: [37, 58.1], a: [34.6, 55.6], K: [23.2, 59.6], ST: [21.4, 54.6], b: [24.6, 53.2], LW: [14.4, 52.6], c: [15.6, 54.8], CM: [23, 46], d: [24.4, 48] },
+      { ms: 1500, ball: [21.4, 56.6], ST: [19.8, 56.6], b: [25.2, 53.6] },
+    ],
+    ask: {
+      ST: {
+        rule: 'tapin',
+        steps: [{
+          type: 'choose', q: 'The ball is rolling slowly across to you, right in front of the goal. What do you do?',
+          opts: [
+            ['Tap it in first time', 2, "Slow ball, right in front of the goal: tap it in! Stopping it would give their keeper time to get across.", 'goal'],
+            ['Stop it, then shoot', 1, "Usually a touch is smart, but this ball is slow and you're right in front of goal. Tap it in before their keeper gets across."],
+            ['Pass it back to {CM}', 0, "You're two steps from an open goal. This one is yours to score!"],
+          ],
+        }],
+      },
+    },
+  },
+  { // two of us against their keeper: pass across
+    id: 'twoOnKeeper',
+    pill: '{ST} broke through, with {LW} running alongside',
+    at: {
+      ST: [22, 38.5], ball: [22, 39.9], LW: [13, 38.5], CM: [26, 37], RW: [34, 40],
+      K: [20, 58.4], a: [24.6, 37.2], b: [31, 42],
+    },
+    play: [{ ms: 1800, ST: [21.6, 50], ball: [21.4, 51.4], LW: [14.6, 50.2], a: [23.4, 47.2], K: [20.8, 55], b: [28.4, 49], CM: [24.4, 43.5], RW: [32, 49.5] }],
+    ask: {
+      ST: {
+        rule: 'pass',
+        steps: [{
+          type: 'aim', q: 'Their keeper is rushing out at you. Drag the ball to where it should go.',
+          targets: [
+            { to: 'LW', r: 2.8, g: 2, text: 'Slide it across to {LW}', why: "Their keeper came out to you, so {LW} has an open goal. Sliding it across is the smart, unselfish play." },
+            { goal: true, g: 1, why: "You might score, but their keeper is right in front of you. {LW} had an open goal." },
+            { to: 'RW', r: 2, g: 0, why: "{RW} is far away, with a defender close by." },
+          ],
+        }],
+      },
+      LW: {
+        from: [13.6, 44.5], rule: 'level',
+        good: 'Level with {ST}, then a calm finish into the empty goal.',
+        steps: [{
+          type: 'place', rule: 'level', q: '{ST} is through on goal. Where should you run?',
+          zones: [[15, 50, 2.4, 2]],
+          where: 'Into the box, level with {ST} and a few steps away',
+          why: "Running level with {ST} gives them a pass if their keeper comes out. Don't run ahead of the ball, or the pass can't reach you.",
+          traps: [[8, 54, 32, 61, "That's too far ahead! You'd be past the ball and offside, so {ST} can't pass it to you."]],
+        }, {
+          type: 'choose', rule: 'tapin', q: "{ST} slides it across to you, nice and slow. Their keeper is stuck on the other side. What do you do?",
+          opts: [
+            ['Side-foot it into the empty goal', 2, "The goal is open, and the ball is coming slowly. A calm side-foot is all you need."],
+            ['Stop it and look around', 0, "Stopping gives their keeper and defender time to get back. Just put it in!"],
+            ['Blast it as hard as you can', 0, "You don't need power with an open goal. A big swing can miss the target."],
+          ],
+        }],
+      },
+    },
+  },
+  { // the keeper pushes a shot out: follow in, control the bouncing ball
+    id: 'rebound',
+    pill: '{ST} shot, and their keeper pushed it out',
+    at: {
+      ST: [24, 49.5], ball: [23.6, 50.9], CM: [21.5, 41], LW: [11, 48.5], RW: [32, 48],
+      K: [20.5, 59], b: [27, 51.4], c: [12.4, 50.8], a: [30.4, 50.2], d: [16.6, 45.4],
+    },
+    play: [
+      { ms: 450, ball: [21.6, 58.6], K: [21.4, 58.6] },
+      { ms: 1200, ball: [21.8, 46.4], air: 1, ST: [23.4, 52.2], CM: [21.6, 44.6], LW: [14.2, 54.6], c: [13.2, 57.6], RW: [28.4, 54], a: [27.6, 56.2], d: [18, 46.4], K: [22, 59] },
+    ],
+    ask: {
+      CM: {
+        rule: 'touch', tags: ['loose'],
+        good: 'Control first, then a low shot to the side their keeper can\'t reach.',
+        steps: [{
+          type: 'choose', q: 'The ball is bouncing toward you at the edge of the box. What do you do?',
+          opts: [
+            ['Control it first, then shoot', 2, "A bouncing ball is really hard to hit cleanly. Get it under control first, then you can aim your shot."],
+            ['Volley it first time as hard as you can', 0, "Volleying a bouncing ball is super hard. It usually flies over the bar or way wide."],
+            ['Pass it back to our defenders', 0, "You're at the edge of their box, and their keeper is scrambling. This is a chance to score!"],
+          ],
+        }, { type: 'shot', kx: 5, q: 'Their keeper is still getting up. Where do you aim?' }],
+      },
+      ST: {
+        from: [24, 50.2], rule: 'follow',
+        steps: [{
+          type: 'choose', q: 'Their keeper pushed your shot out. What should you do now?',
+          opts: [
+            ['Follow in toward the goal, ready for a rebound', 2, "Keepers often can't hold the next shot either. Strikers who follow in score lots of easy goals."],
+            ['Stop and put your hands on your head', 0, "No time to be sad! The ball is still in play, and {CM} might shoot again."],
+            ['Run back toward halfway', 0, "The ball is still right by their goal. Stay close for a rebound!"],
+          ],
+        }],
+      },
+      LW: {
+        from: [11.4, 49.4], rule: 'follow',
+        steps: [{
+          type: 'place', q: "Their keeper pushed {ST}'s shot out. Where should you be?",
+          zones: [[15.4, 55, 2.4, 2.2]],
+          where: 'At the back post',
+          why: "Crash the back post! When their keeper pushes a shot out, the next shot or pass often ends up there.",
+          traps: [[0, 36, 9, 61, "Out by the touchline you can't score. When we shoot, get into the box for the rebound."]],
+        }],
+      },
+    },
+  },
+  { // through ball: pass into the space ahead of the striker's run
+    id: 'throughBall',
+    pill: '{CM} got the ball, and {ST} got ready to run',
+    at: {
+      CM: [21, 37.5], ball: [21, 38.9], ST: [24.5, 45.2], LW: [9, 44.5], RW: [33.5, 44.5],
+      K: [20, 58.2], a: [22.6, 46.6], b: [16.4, 46.4], c: [31, 46.2], d: [21.4, 42.6],
+    },
+    play: [{ ms: 1300, CM: [21, 40], ball: [21.2, 41.4], ST: [26.2, 47.2], a: [23, 47.6], b: [17, 47.2], d: [20.2, 43.8], LW: [9.4, 46], RW: [33.4, 46.4], c: [31.4, 47.6] }],
+    ask: {
+      CM: {
+        rule: 'ahead',
+        steps: [{
+          type: 'aim', q: '{ST} is running behind their defenders. Drag the ball to where the pass should go.',
+          targets: [
+            { at: [28.6, 52.6], r: 3, g: 2, text: 'Pass it into the space ahead of {ST}', why: "Into the space ahead of {ST}! They can run onto it with only the keeper to beat." },
+            { to: 'ST', r: 1.8, g: 1, why: "To their feet is OK, but {ST} has to stop, and their defender can step in. A pass into the space ahead is better." },
+            { goal: true, g: 0, why: "You're too far out for a good shot. {ST} is making a great run, so use it!" },
+            { to: 'LW', r: 2.2, g: 1, why: "A safe pass, but {ST}'s run gives us a much better chance." },
+            { to: 'RW', r: 2, g: 0, why: "{RW} has a defender right next to them." },
+          ],
+        }],
+      },
+      ST: {
+        from: [25.6, 40.6], rule: 'run',
+        steps: [{
+          type: 'place', q: '{CM} has the ball and is looking forward. Where should you be, ready for the pass?',
+          zones: [[27, 46.2, 2.4, 1.4]],
+          where: 'Level with their last defender, in a gap, ready to run in behind',
+          why: "Wait level with their last defender, in a gap. As soon as {CM} passes, run in behind them and you're through on goal.",
+          traps: [[20, 47.9, 34, 57, "That's past their last defender, so you'd be offside. Wait level with them, then run in behind when the pass comes."],
+            [14, 36, 28, 43, "Coming back toward the ball brings your defender with you and makes it crowded. Wait level with their last defender instead."]],
+        }],
+      },
+    },
+  },
+  { // one-on-one with the keeper: calm and low
+    id: 'oneOnOne',
+    pill: '{ST} got through, one-on-one with their keeper',
+    at: {
+      ST: [23, 40], ball: [22.8, 41.4], CM: [19, 36.5], LW: [9.5, 41], RW: [33, 40.5],
+      K: [20, 58.6], a: [21, 38.4], c: [11, 43.4],
+    },
+    play: [{ ms: 1800, ST: [21.4, 50.2], ball: [21.2, 51.6], a: [22.6, 47.4], K: [20.6, 56.6], LW: [11.6, 48.6], c: [12.8, 50.8], RW: [31, 48.4], CM: [20.6, 42.8] }],
+    ask: {
+      ST: {
+        rule: 'low',
+        good: 'Calm and low, away from the keeper. Perfect!',
+        steps: [{
+          type: 'choose', q: "You're one-on-one with their keeper. What do you do?",
+          opts: [
+            ['Stay calm and shoot low, past the keeper', 2, "Calm and low wins! A low shot is the hardest kind for a keeper to reach."],
+            ['Dribble around their keeper', 2, "Their keeper is rushing at you. One quick touch around them, and you've got an open goal!"],
+            ['Blast it as hard as you can', 0, "Blasting it usually sends it over the bar or straight at the keeper. Calm and low is better."],
+            ['Stop and wait for help', 0, "Their defender is right behind you. If you wait, they'll catch you and take the ball."],
+          ],
+        }, { type: 'shot', kx: 3.2, big: true, q: "Let's say you shoot. Their keeper is rushing out. Where do you aim?" }],
+      },
+      CM: {
+        from: [19.6, 39.4], rule: 'follow',
+        steps: [{
+          type: 'place', q: '{ST} is through on goal. Where should you be?',
+          zones: [[19, 46, 2.6, 2.2]],
+          where: 'Following in, at the edge of the box',
+          why: "Follow the play! If the keeper saves it, the ball often pops out to the edge of the box, and you can score the rebound.",
+          traps: [[8, 36, 32, 41.5, "Too far back. If their keeper saves it, you won't get to the rebound in time."]],
+        }],
+      },
+    },
+  },
+  { // the ball pops out to the edge of the box with a clear sight of goal: shoot
+    id: 'edgeShoot',
+    pill: 'Their defender cleared it straight to {CM}',
+    at: {
+      ball: [27.4, 53.4], CM: [21.4, 41.6], ST: [23.8, 55], LW: [13.4, 52.6], RW: [31.6, 50],
+      K: [20.4, 59], a: [26.4, 55.4], b: [17.8, 54.6], c: [14.6, 54.8], e: [30.4, 52.4], d: [15.6, 44.4],
+    },
+    play: [{ ms: 1100, ball: [21.8, 47.6], CM: [21.5, 45.8], d: [17.2, 45.8] }],
+    ask: {
+      CM: {
+        rule: 'sight', tags: ['loose'],
+        good: 'Clear sight of goal, a touch to set it, and a low shot away from the keeper.',
+        steps: [{
+          type: 'choose', q: 'The ball comes to you at the edge of the box. Nobody is between you and the goal. What do you do?',
+          opts: [
+            ['Take a touch to set it, then shoot low', 2, "Clear sight of goal and nobody close: shoot! It's not a tap-in, so set it with one touch and pick your spot."],
+            ['Dribble into the box, then shoot', 2, "There's space in front of you, so a few touches closer makes the shot easier. Shoot before their defender gets to you!"],
+            ['Pass it out wide to {RW}', 1, "{RW} is marked and further from goal. You had a clear sight of goal, so this was your chance!"],
+            ['Smash it first time', 0, "It's not a tap-in, and swinging first time usually sends it over the bar. Take a touch and pick your spot."],
+          ],
+        }, { type: 'shot', kx: 3.4, q: 'Now you shoot. Where do you aim?' }],
+      },
+    },
+  },
+  { // edge of the box, but two defenders block the shot: pass to the free winger
+    id: 'edgeBlocked',
+    pill: '{CM} carried the ball to the edge of their box',
+    at: {
+      CM: [20, 39.5], ball: [20.2, 40.9], RW: [33.5, 43.5], ST: [19.4, 51.6], LW: [9.5, 47],
+      K: [20, 59.2], a: [18.8, 47.4], b: [22, 48], e: [31, 45.2], f: [20.2, 53.8], c: [11, 49.4],
+    },
+    play: [{ ms: 1400, CM: [20.4, 43.6], ball: [20.6, 45], RW: [29.8, 50.4], e: [32.2, 48], a: [19.2, 47.8], b: [22, 48.4] }],
+    ask: {
+      CM: {
+        rule: 'sight',
+        steps: [{
+          type: 'aim', q: 'Two defenders are blocking your shot. Drag the ball to where it should go.',
+          targets: [
+            { to: 'RW', r: 2.8, g: 2, text: 'Pass it to {RW}, who ran into the box', why: "{RW} ran free into the box. With two defenders blocking your shot, that pass gives us a much better chance." },
+            { goal: true, g: 0, why: "Two defenders are right in front of you. Your shot would get blocked." },
+            { to: 'ST', r: 2, g: 0, why: "{ST} is marked, and the pass would have to go through their defenders." },
+            { to: 'LW', r: 2, g: 1, why: "Safe, but {LW} has a defender close by. {RW} was free in the box." },
+          ],
+        }],
+      },
+      RW: {
+        from: [33.4, 44.4], rule: 'sight',
+        steps: [{
+          type: 'place', q: '{CM} has the ball at the edge of the box. Where should you go?',
+          zones: [[29.8, 50.4, 2.4, 2.2]],
+          where: 'Into the box, in the space away from defenders',
+          why: "Run into the box! {CM} can see you there, and you'd be in a great spot to score.",
+          traps: [[34, 36, 42, 61, "Staying out by the touchline is too far from goal. Get into the box, where you can score."]],
+        }],
+      },
+    },
+  },
+  { // striker with their back to goal: lay it off
+    id: 'layoff',
+    pill: '{CM} passed it up to {ST} at the edge of the box',
+    at: {
+      CM: [21, 37.5], ball: [21, 38.9], ST: [20, 47], LW: [10, 46.5], RW: [31, 46],
+      K: [20, 59], a: [20, 49.2], b: [26, 51], c: [11.5, 48.8], e: [29.2, 48.4], d: [26, 40],
+    },
+    play: [{ ms: 800, ball: [20.3, 45.6], CM: [21.2, 41.2], d: [25.6, 41.6] }],
+    ask: {
+      ST: {
+        rule: 'turn',
+        steps: [{
+          type: 'choose', q: 'You get the ball with your back to goal, and their defender is right behind you. What should you do?',
+          opts: [
+            ['Pass it back to {CM}, who is facing the goal', 2, "{CM} is running in, facing the goal with space to shoot. A simple pass back is a great choice.", 'CM'],
+            ['Turn past your defender, then dribble in and shoot', 2, "Spin away from your defender, keeping your body between them and the ball, and you're in on goal. Then shoot!"],
+            ['Shoot first time without turning', 0, "With your back to goal and a defender right behind you, a shot without turning almost never works. Turn them first, or pass it back."],
+            ['Keep the ball and wait', 1, "Keeping it is OK, but waiting lets more defenders arrive. Turn and go, or pass it back to {CM}."],
+          ],
+        }],
+      },
+      CM: {
+        from: [21, 37.2], rule: 'away',
+        good: 'You got close behind {ST}, then took your touch away from trouble.',
+        steps: [{
+          type: 'place', rule: 'support', q: 'You passed up to {ST}, and their defender is right behind them. Where should you go?',
+          zones: [[22, 43, 2.6, 1.8]],
+          where: 'Close behind {ST}, facing the goal',
+          why: "Get close behind {ST}, a few steps away and facing the goal. Then they can pass it straight back to you for a shot.",
+          traps: [[16, 45, 24, 50, "Too close! Standing right next to {ST} makes it crowded and brings another defender over."]],
+        }, {
+          type: 'choose', q: '{ST} passes it back to you. Their midfielder is rushing at you from one side. What do you do?',
+          opts: [
+            ['Take your touch away from the defender, then shoot', 2, "Touch it away from the defender, into space. Then you have time to pick your spot."],
+            ['Take your touch toward the defender', 0, "That takes the ball straight to them!"],
+            ['Smash it first time', 0, "It's not a tap-in. A first-time swing from out here usually flies over the bar."],
+          ],
+        }],
+      },
+    },
+  },
+  { // corner: aim for the free teammate; in the box, find space
+    id: 'cornerFree',
+    pill: 'Corner kick for us, taken by {RW}',
+    at: {
+      RW: [41.2, 60.8], ball: [39.7, 59.7], ST: [24.2, 53.4], LW: [15, 52.5], CM: [23.6, 48.6],
+      K: [20.6, 59.2], a: [24.6, 55.6], c: [15.8, 54.6], d: [23.2, 50.8],
+    },
+    play: [{ ms: 1400, ST: [22.8, 55.6], a: [23.4, 57.6], LW: [16.6, 55.4], c: [17.4, 57.4], CM: [19.4, 51.8], d: [23.6, 49.6] }],
+    ask: {
+      RW: {
+        rule: 'corner', lofted: true,
+        steps: [{
+          type: 'aim', q: 'Drag the ball to where you should aim the corner.',
+          targets: [
+            { to: 'CM', r: 2.8, g: 2, text: 'Aim for {CM}, who lost their defender', why: "{CM} got away from their defender and is free near the penalty spot. Always aim for the teammate in space!" },
+            { to: 'K', r: 2.2, g: 0, why: "That goes right into their keeper's hands. Keep it away from the keeper!" },
+            { to: 'ST', r: 1.8, g: 0, why: "{ST} has a defender stuck to them, so the defender would win it." },
+            { to: 'LW', r: 1.8, g: 0, why: "{LW} has a defender stuck to them, so the defender would win it." },
+            { goal: true, g: 0, why: "Scoring straight from a corner almost never happens. Find a teammate in space!" },
+          ],
+        }],
+      },
+      CM: {
+        from: [24.4, 47.6], rule: 'space',
+        good: 'You lost your defender, then controlled the bouncing ball before shooting.',
+        steps: [{
+          type: 'place', q: 'Corner kick! Your defender is right next to you. Where should you go?',
+          zones: [[19.4, 52, 2, 1.8], [28, 53, 2, 1.8]],
+          where: 'Into a space away from the defenders',
+          why: "Move away from your defender into an empty space. The corner taker can only find you if you're free!",
+          traps: [[16.5, 56.5, 24, 61, "Don't stand right in front of their keeper. They can jump and catch the ball over you."]],
+        }, {
+          type: 'choose', rule: 'touch', q: 'The corner comes to you, fast and bouncing. What do you do?',
+          opts: [
+            ['Trap it first, then shoot', 2, "A fast, bouncing ball is the hardest kind to hit. Trap it, then shoot."],
+            ['Swing at it first time', 0, "Swinging at a fast, bouncing ball usually misses or sends it miles over."],
+            ['Let it go past you', 0, "It's coming to you, in front of goal. Don't waste it!"],
+          ],
+        }],
+      },
+      ST: {
+        from: [21.6, 56.6], rule: 'space',
+        good: 'You got out of the crowd into space, then controlled it first.',
+        steps: [{
+          type: 'place', q: "Corner kick! You're in front of their keeper with a defender on you. Where should you go?",
+          zones: [[27.6, 52.4, 2.2, 2]],
+          where: 'Into the empty space, away from the keeper and the crowd',
+          why: "Get out of the crowd! In an empty space, away from the keeper, the corner can find you.",
+          traps: [[16.5, 56.5, 24, 61, "Standing in front of their keeper is the worst spot: they can jump and catch the ball right over you."]],
+        }, {
+          type: 'choose', rule: 'touch', q: 'The corner comes to you, fast and bouncing. What do you do?',
+          opts: [
+            ['Trap it first, then shoot', 2, "A fast, bouncing ball is the hardest kind to hit. Trap it, then shoot."],
+            ['Swing at it first time', 0, "Swinging at a fast, bouncing ball usually misses or sends it miles over."],
+            ['Let it go past you', 0, "It's coming to you, in front of goal. Don't waste it!"],
+          ],
+        }],
+      },
+    },
+  },
+  { // corner where everyone is marked: play it short
+    id: 'cornerShort',
+    pill: 'Corner kick for us, taken by {CM}',
+    at: {
+      CM: [41.2, 60.8], ball: [39.7, 59.7], ST: [21.6, 55.6], LW: [16.8, 54], RW: [30.6, 51.6],
+      K: [20.6, 59.2], a: [22.4, 57.6], c: [17.4, 56.2], e: [29.4, 53.8], b: [25.8, 56.6],
+    },
+    play: [{ ms: 1400, RW: [35.2, 56.4], e: [30.6, 52.8], ST: [21.4, 55.4], LW: [16.6, 54.2] }],
+    ask: {
+      CM: {
+        rule: 'short', lofted: true,
+        steps: [{
+          type: 'aim', q: 'Everyone in the box is marked. Drag the ball to where it should go.',
+          targets: [
+            { to: 'RW', r: 2.8, g: 2, text: 'Play it short to {RW}', why: "Everyone in the box is marked, but {RW} came short and is free. A short pass keeps the ball, and they can dribble in or cross from a better spot." },
+            { to: 'K', r: 2.2, g: 0, why: "That goes right into their keeper's hands." },
+            { to: 'ST', r: 1.8, g: 0, why: "{ST} is marked tight, right next to their keeper." },
+            { to: 'LW', r: 1.8, g: 0, why: "{LW} has a defender stuck to them." },
+            { at: [20.5, 51.5], r: 2.4, g: 1, why: "Into the space at the penalty spot is OK, but nobody is there yet. The short pass to {RW} keeps the ball." },
+            { goal: true, g: 0, why: "Scoring straight from a corner almost never happens. Find a free teammate!" },
+          ],
+        }],
+      },
+      RW: {
+        from: [30.4, 50.6], rule: 'short',
+        steps: [{
+          type: 'place', q: 'Corner kick! Everyone in the box is marked. Where could you go to help?',
+          zones: [[35.4, 56.2, 2.6, 2.4]],
+          where: 'Short, near the corner, so you are an easy pass',
+          why: "When everyone in the box is marked, come short! A free player near the corner gives the taker an easy pass.",
+          traps: [[16.5, 56.5, 24, 61, "Not in front of their keeper! It's crowded, and their keeper catches anything that comes in there."]],
+        }],
+      },
+      ST: {
+        from: [21, 56], rule: 'space',
+        good: 'Out of the crowd and into space, then control first. Great thinking!',
+        steps: [{
+          type: 'place', q: "Corner kick! You're stuck in front of their keeper with a defender on you. Where should you go?",
+          zones: [[20.6, 50.6, 2.4, 1.8]],
+          where: 'Back toward the penalty spot, away from the crowd',
+          why: "Get out of the crowd in front of their keeper. Step back into the space around the penalty spot, where the corner can find you.",
+          traps: [[16.5, 56.5, 24, 61, "Standing in front of their keeper is the worst spot: they can jump and catch the ball right over you."]],
+        }, {
+          type: 'choose', rule: 'touch', q: 'The corner bounces toward you. What do you do?',
+          opts: [
+            ['Let it bounce, control it, then shoot', 2, "A bouncing ball is tricky. Control it first, then shoot."],
+            ['Swing at it while it bounces', 0, "Swinging at a bouncing ball usually misses or flies over the bar."],
+            ['Leave it for a teammate', 0, "It's coming to you in front of goal. Take it!"],
+          ],
+        }],
+      },
+    },
+  },
+  { // high cross dropping at the back post: control it, don't volley
+    id: 'highCross',
+    pill: '{RW} lifted a high cross toward the back post',
+    at: {
+      RW: [36, 50], ball: [36.4, 51.4], LW: [11.6, 49], ST: [21.6, 51.2], CM: [24.4, 43.5],
+      K: [19.6, 59.2], a: [34, 50.6], c: [12.6, 51.4], b: [21.8, 53.6], d: [25, 46],
+    },
+    play: [
+      { ms: 400, LW: [12.6, 50.6], c: [13.2, 52.6] },
+      { ms: 1500, ball: [15.8, 54.6], air: 1, LW: [14.8, 53.4], c: [13.4, 55.8], ST: [21.4, 54.6], b: [21.8, 56.8], CM: [24, 47], d: [24.6, 49.4] },
+    ],
+    ask: {
+      LW: {
+        rule: 'touch',
+        good: 'Control it first, then a low shot into the far side.',
+        steps: [{
+          type: 'choose', q: 'The high cross is dropping to you at the back post. What do you do?',
+          opts: [
+            ['Let it drop and control it, then shoot', 2, "A dropping, bouncing ball is really hard to hit cleanly. Control it first with your foot or thigh, then shoot."],
+            ['Swing at it in the air first time', 0, "Volleys look cool, but they usually fly way over the bar or miss the ball completely."],
+            ['Leave it for {ST}', 0, "It's coming to you, and you're the closest to the goal. Take it!"],
+          ],
+        }, { type: 'shot', kx: 2.6 }],
+      },
+    },
+  },
+  { // striker free in the box with a clear sight of goal: shoot, don't pass
+    id: 'freeInBox',
+    pill: '{LW} passed into the box to {ST}',
+    at: {
+      LW: [8.4, 48], ball: [9.4, 49], ST: [18.4, 47.4], RW: [31, 49.4], CM: [22.4, 41.6],
+      K: [20, 59.2], b: [18.8, 49.6], c: [10.6, 51.6], a: [29.6, 51.6], d: [22.8, 44],
+    },
+    play: [
+      { ms: 900, ST: [21.6, 50.8], b: [18.2, 47.8] },
+      { ms: 800, ball: [20.2, 50.6] },
+    ],
+    ask: {
+      ST: {
+        rule: 'sight',
+        good: 'You were the free player, so you shot, and you aimed low away from the keeper.',
+        steps: [{
+          type: 'choose', q: "The pass comes to you in the box. You've lost your defender. What do you do?",
+          opts: [
+            ['Take a touch toward goal, then shoot low', 2, "You're free in the box with a clear sight of goal, and your teammates are marked. This is your chance. Shoot!"],
+            ['Pass it out to {RW}', 1, "{RW} is marked and further from goal. When you're the free player in the box, have a shot!"],
+            ['Smash it first time', 0, "It's not a tap-in, so a touch first helps you pick your spot and hit the target."],
+          ],
+        }, { type: 'shot', kx: 3 }],
+      },
+    },
+  },
+  { // crowded on one side: switch it to the free winger
+    id: 'switchPlay',
+    pill: "{CM} got the ball, but it's crowded nearby",
+    at: {
+      CM: [14, 39], ball: [14.8, 40.2], LW: [6, 47], ST: [13.6, 50], RW: [33.6, 45],
+      K: [19, 59.2], a: [12.2, 44.2], b: [17.2, 47.4], c: [7.6, 49.2], f: [14.4, 52.2], e: [21.4, 50.4],
+    },
+    play: [{ ms: 1300, CM: [15.4, 41.6], ball: [16.2, 42.6], a: [13.8, 45.2], RW: [32.6, 50.2], K: [19.2, 59.2] }],
+    ask: {
+      CM: {
+        rule: 'switch',
+        steps: [{
+          type: 'aim', q: "It's crowded around you. Drag the ball to where it should go.",
+          targets: [
+            { to: 'RW', r: 3, g: 2, text: 'Switch it to {RW}, who is all alone', why: "Everyone is crowded on one side, so {RW} is all alone on the other. Switching it gives them loads of space to run at goal." },
+            { to: 'ST', r: 2, g: 0, why: "{ST} is marked, and the pass goes through a crowd of defenders." },
+            { to: 'LW', r: 2, g: 0, why: "{LW} has a defender stuck to them." },
+            { goal: true, g: 0, why: "You're way too far out, with lots of players in the way." },
+          ],
+        }],
+      },
+    },
+  },
+  { // a long way out with space ahead: dribble closer before shooting
+    id: 'tooFar',
+    pill: '{CM} won the ball a long way from their goal',
+    at: {
+      CM: [21, 36.8], ball: [21, 38.2], ST: [18, 47.4], LW: [9, 46], RW: [31.6, 46],
+      K: [20, 58.8], a: [18.4, 49.6], b: [24.6, 49.6], c: [10.4, 48.2], e: [30, 48.2], d: [25.4, 37.4],
+    },
+    play: [{ ms: 1300, CM: [21, 40.2], ball: [21.2, 41.6], d: [24.4, 39.2] }],
+    ask: {
+      CM: {
+        rule: 'carry',
+        steps: [{
+          type: 'choose', q: "You're a long way from goal, but there's lots of space in front of you. What do you do?",
+          opts: [
+            ['Dribble forward into the space', 2, "There's lots of space in front of you. Get closer before you shoot. From way out here, shots are easy for the keeper."],
+            ['Shoot from here', 0, "You're a long way out. Shots from this far rarely go in. Use the space and get closer first."],
+            ['Pass it back to our defenders', 0, "Nobody is pressing you! Go forward into the space."],
+          ],
+        }],
+      },
+    },
+  },
+
+  /* ---- Scrappy loose balls in the box. The lesson every time: control it,
+     LOOK UP, then shoot or pass. Step 2 starts with a look-up sweep. ---- */
+  { // loose ball to the striker, everyone else marked: shoot
+    id: 'looseShoot',
+    pill: 'A shot got blocked, and the ball is bouncing around their box',
+    at: {
+      CM: [24, 46], ball: [24.2, 47.4], ST: [19.5, 50.5], LW: [12, 52], RW: [30, 51],
+      K: [20.4, 59.2], a: [23.6, 50.2], b: [18.2, 53.4], c: [13.4, 54.4], e: [29, 53.5], d: [26, 44],
+    },
+    play: [
+      { ms: 350, ball: [23.4, 50.4] },
+      { ms: 500, ball: [21.8, 54.2], air: 1, a: [23.2, 51.2], b: [18.6, 54.2], ST: [20.2, 51.3], LW: [12.6, 53.6], c: [13.6, 55.6], RW: [30.4, 52.4], e: [29.2, 54.6], CM: [24, 46.6], d: [25.6, 44.6] },
+      { ms: 450, ball: [20.8, 52.9], air: 1, b: [17.4, 54.6], K: [20.8, 59.2] },
+    ],
+    ask: {
+      ST: {
+        rule: 'scan', tags: ['loose'],
+        good: 'Control, look up, and shoot. Nobody had a better chance than you!',
+        steps: [{
+          type: 'choose', q: 'The ball bounces loose to you in their box! What do you do first?',
+          opts: [
+            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Shoot straight away without looking', 0, "Swinging at a bouncing ball without looking is how chances fly wide or get blocked. Control it and look up first."],
+            ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
+          ],
+        }, {
+          type: 'aim', scan: true, q: 'You look up. Drag the ball to where it should go.',
+          targets: [
+            { goal: true, g: 2, text: 'Shoot!', why: "You looked up, and nobody had a better chance: your teammates are marked, and you've got a clear sight of goal. Shoot!" },
+            { to: 'CM', r: 2, g: 1, why: "Safe, but {CM} is much further out. You had a clear sight of goal." },
+            { to: 'LW', r: 2, g: 0, why: "{LW} has a defender right next to them." },
+            { to: 'RW', r: 2, g: 0, why: "{RW} has a defender right next to them." },
+          ],
+        }],
+      },
+    },
+  },
+  { // loose ball to the striker in a crowd, winger free at the back post: pass
+    id: 'loosePass',
+    pill: 'The ball pinged around in front of their goal',
+    at: {
+      RW: [33, 54], ball: [31.6, 55.4], ST: [22.6, 52.4], LW: [12.5, 50.5], CM: [23, 45],
+      K: [21, 59.2], a: [23.4, 56.4], b: [20.4, 56], c: [14.4, 51.8], e: [31, 52.4], d: [24.5, 47.5],
+    },
+    play: [
+      { ms: 400, ball: [24.4, 57.4], air: 1, K: [22.2, 59.2], RW: [33.4, 55.2], e: [31, 53.2] },
+      { ms: 550, ball: [22.4, 54.8], air: 1, ST: [23.6, 53.4], a: [23.4, 56.4], b: [20.4, 57.2], LW: [15.4, 56.2], c: [18.6, 53.2], CM: [23, 46.5], d: [24.6, 48.6] },
+    ],
+    ask: {
+      ST: {
+        rule: 'scan', tags: ['loose'],
+        good: 'Control, look up, and find the free teammate. That is how scrappy chances become goals!',
+        steps: [{
+          type: 'choose', q: 'The ball bounces to you in the crowd! What do you do first?',
+          opts: [
+            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Shoot straight away without looking', 0, "There are bodies everywhere in front of you. A panicked shot would hit one of them. Control it and look up first."],
+            ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
+          ],
+        }, {
+          type: 'aim', scan: true, q: 'You look up. Drag the ball to where it should go.',
+          targets: [
+            { to: 'LW', r: 2.8, g: 2, text: 'Pass it to {LW}, free at the back post', why: "You looked up and saw {LW} all alone at the back post. Their players are all around you, so the pass gives an easy goal." },
+            { goal: true, g: 0, why: "Their keeper and two defenders are right in front of you. A shot from here would get blocked." },
+            { to: 'CM', r: 2, g: 1, why: "Safe, but {CM} is marked and further out. {LW} had an easy chance." },
+            { to: 'RW', r: 2, g: 0, why: "{RW} is out wide with a defender close by." },
+          ],
+        }],
+      },
+      LW: {
+        from: [12.5, 50.5], rule: 'space', tags: ['loose'],
+        steps: [{
+          type: 'place', q: "There's a scramble in front of their goal. Where should you be?",
+          zones: [[15.4, 56, 2.2, 2]],
+          where: 'At the back post, away from the crowd',
+          why: "Get away from the crowd, to the back post. Then whoever gets the loose ball can look up and find you free.",
+          traps: [[17.5, 53, 26, 61, "That's right in the crowd! Everyone is there already. Find the space away from it, so you're free for a pass."]],
+        }],
+      },
+    },
+  },
+  { // loose ball squirts out to the winger at a tight angle, striker free: pass
+    id: 'looseWingPass',
+    pill: 'A scramble in their box, and the ball squirted out wide',
+    at: {
+      RW: [33.5, 50], ST: [21.4, 51.4], CM: [22, 44.5], LW: [12, 50], ball: [24.2, 55.6],
+      K: [21.6, 59.2], a: [23.6, 57.4], b: [25.6, 54.6], c: [13.4, 52.4], d: [22.4, 47.2], e: [30, 51.4],
+    },
+    play: [
+      { ms: 400, ball: [26.6, 56.8], air: 1, b: [26.6, 56.6], K: [22.6, 59.2] },
+      { ms: 600, ball: [31.6, 56.4], air: 1, RW: [33, 55], e: [32.4, 52.8], ST: [21, 53.6], b: [27.8, 57.8], a: [24.4, 57.6], LW: [12.6, 52], c: [13.8, 54.2] },
+    ],
+    ask: {
+      RW: {
+        rule: 'scan', tags: ['loose'],
+        good: 'Control, look up, and pass. {ST} had the easy chance!',
+        steps: [{
+          type: 'choose', q: 'The ball squirts out to you near the byline. What do you do first?',
+          opts: [
+            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Blast it at goal straight away', 0, "From this tight angle, a panicked shot almost never goes in. Control it and look up first."],
+            ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
+          ],
+        }, {
+          type: 'aim', scan: true, q: 'You look up. Drag the ball to where it should go.',
+          targets: [
+            { to: 'ST', r: 2.8, g: 2, text: 'Pass it to {ST}, free in front of goal', why: "You looked up and saw {ST} all alone in front of goal. From your tight angle, that pass is a much better chance than a shot." },
+            { goal: true, g: 0, why: "The angle is really tight, and their keeper is guarding the near post. Your shot would almost never go in." },
+            { to: 'CM', r: 2, g: 1, why: "Not bad, but {CM} is further out. {ST} was right in front of goal." },
+            { to: 'LW', r: 2, g: 0, why: "{LW} is marked, and the pass would go through the crowd." },
+          ],
+        }],
+      },
+    },
+  },
+  { // their keeper spills it to the winger, teammates marked: shoot
+    id: 'looseWingShoot',
+    pill: 'Their keeper dropped the ball, and it bounced out',
+    at: {
+      ST: [21, 51], RW: [31, 50], CM: [22, 44], LW: [12, 50], ball: [21.6, 58.4],
+      K: [21.2, 59.4], a: [22.6, 53.2], c: [13.4, 52.4], e: [29, 52], d: [23, 46.6],
+    },
+    play: [
+      { ms: 500, ball: [25.6, 55.2], air: 1, ST: [20.6, 53.4], a: [21.2, 55.6], K: [21.6, 59.6] },
+      { ms: 500, ball: [27.2, 53.4], air: 1, RW: [28.4, 52], e: [31, 51.2], LW: [14, 54], c: [15.2, 56.2] },
+    ],
+    ask: {
+      RW: {
+        rule: 'scan', tags: ['loose'],
+        good: 'Control, look up, and shoot. Your teammates were marked, so it was your chance.',
+        steps: [{
+          type: 'choose', q: 'The ball bounces out to you inside the box. What do you do first?',
+          opts: [
+            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Shoot straight away without looking', 0, "Swinging at a bouncing ball without looking is how chances fly wide. Control it and look up first."],
+            ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
+          ],
+        }, {
+          type: 'aim', scan: true, q: 'You look up. Drag the ball to where it should go.',
+          targets: [
+            { goal: true, g: 2, text: 'Shoot!', why: "You looked up: your teammates are marked, and you've got a clear sight of goal. This one is yours. Shoot!" },
+            { to: 'ST', r: 2, g: 0, why: "{ST} has a defender right on them, so that pass would get cut out." },
+            { to: 'CM', r: 2, g: 1, why: "Safe, but {CM} is further out and marked. You had a clear sight of goal." },
+            { to: 'LW', r: 2, g: 0, why: "{LW} is marked, and the pass goes across the whole box." },
+          ],
+        }],
+      },
+    },
+  },
+  { // loose ball drops to the center mid, bodies in the way, winger free: pass
+    id: 'looseEdgePass',
+    pill: "Their clearance hit a player and dropped near the edge of the box",
+    at: {
+      ball: [21, 55.2], CM: [23.4, 43.6], ST: [21.6, 53.6], LW: [12.4, 47.8], RW: [29.6, 51.6],
+      K: [20.6, 59.2], a: [20.6, 56.6], b: [23.4, 52.4], c: [14.2, 51.4], e: [27.6, 53.4], d: [19, 46.6],
+    },
+    play: [
+      { ms: 400, ball: [22.2, 51.4], air: 1, b: [23, 52.8] },
+      { ms: 600, ball: [22.6, 47.4], air: 1, CM: [22.8, 45.8], d: [20.8, 46.2], ST: [21.2, 54.4], LW: [11.6, 52.4], c: [16.6, 53], RW: [29.6, 52], e: [28, 53.8] },
+    ],
+    ask: {
+      CM: {
+        rule: 'scan', tags: ['loose'],
+        good: 'Control, look up, and find the free player. Great scanning!',
+        steps: [{
+          type: 'choose', q: 'The ball drops to you near the edge of the box. What do you do first?',
+          opts: [
+            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Shoot straight away without looking', 0, "There are bodies everywhere in front of you. A panicked shot would hit one of them. Control it and look up first."],
+            ['Kick it anywhere to get rid of it', 0, "It's our ball near their box! Don't waste it. Control it and look up."],
+          ],
+        }, {
+          type: 'aim', scan: true, q: 'You look up. Drag the ball to where it should go.',
+          targets: [
+            { to: 'LW', r: 2.8, g: 2, text: 'Pass it to {LW}, free on the far side', why: "You looked up and saw {LW} all alone on the far side. Your shot would hit the bodies in front of you, so the pass is the better chance." },
+            { goal: true, g: 0, why: "There are bodies everywhere between you and the goal. Your shot would get blocked." },
+            { to: 'ST', r: 2, g: 0, why: "{ST} is surrounded by defenders." },
+            { to: 'RW', r: 2, g: 1, why: "Not bad, but {RW} has a defender close by. {LW} was all alone." },
+          ],
+        }],
+      },
+    },
+  },
+];
+
+// Mirror a scene left ↔ right: x → 40 − x, Left Wing ↔ Right Wing.
+const SWAP = { LW: 'RW', RW: 'LW', LD: 'RD', RD: 'LD' };
+function mirrorScene(sc) {
+  const mx = p => [W - p[0], p[1]];
+  const sw = s => s && s.replace(/\{(LW|RW)\}/g, (m, r) => `{${SWAP[r]}}`);
+  const pos = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [SWAP[k] || k, Array.isArray(v) ? mx(v) : v]));
+  const step = st => Object.assign({}, st, {
+    q: sw(st.q), where: sw(st.where), why: sw(st.why),
+    opts: st.opts && st.opts.map(([t, g, w, to]) => [sw(t), g, sw(w), to && (SWAP[to] || to)]),
+    zones: st.zones && st.zones.map(([x, y, hw, hh]) => [W - x, y, hw, hh]),
+    traps: st.traps && st.traps.map(([x1, y1, x2, y2, w]) => [W - x2, y1, W - x1, y2, sw(w)]),
+    targets: st.targets && st.targets.map(t => Object.assign({}, t, { to: t.to && (SWAP[t.to] || t.to), at: t.at && mx(t.at), text: sw(t.text), why: sw(t.why) })),
+    kx: st.kx == null ? st.kx : 6 - st.kx,
+    play: st.play && st.play.map(pos),
+  });
+  const ask = {};
+  for (const r in sc.ask) {
+    const a = sc.ask[r];
+    ask[SWAP[r] || r] = Object.assign({}, a, { from: a.from && mx(a.from), good: sw(a.good), steps: a.steps.map(step) });
+  }
+  return Object.assign({}, sc, { id: sc.id + '~', mirrored: true, pill: sw(sc.pill), at: pos(sc.at), play: sc.play.map(pos), ask });
+}
+const BOX_ALL = BOX.flatMap(sc => [sc, mirrorScene(sc)]);
+// Every question a position can get, grouped so a round never asks the same one twice.
+function boxAsks(role) {
+  const groups = {};
+  for (const sc of BOX_ALL) {
+    if (!sc.ask[role]) continue;
+    const key = sc.id.replace('~', '') + ':' + (sc.mirrored ? SWAP[role] || role : role);
+    (groups[key] = groups[key] || []).push(sc);
+  }
+  return Object.values(groups);
+}
+
+/* ------------------------------------------------------------------
    Positioning engine. Each shape returns a zone per role:
    { x, y, hw, hh, job } where (x, y) is the ideal spot, hw/hh are
    the half-width/half-height of the "good" zone and job is a JOBS
@@ -1374,10 +2400,31 @@ function buildFrame(sit) {
       break;
     }
   }
+  if (PHASES[sit.phase].we) keepOnside(f, sit);
   const fixed = new Set(f.whiteFixed || []);
   separate(f.white, f.blue, fixed);
   if (f.before) separate(f.before.white, f.before.blue, fixed);
   return f;
+}
+
+/* Offside: when we have the ball, nobody's best spot goes past their last
+   defender (their second-to-last player, counting the keeper), unless it's
+   behind the ball. Level, give or take a yard, is ideal. The run in behind
+   comes once the pass is played. */
+const ONSIDE_GIVE = 1;
+function keepOnside(f, sit) {
+  const ys = Object.values(f.white).map(p => p.y).sort((a, c) => c - a);
+  const line = Math.max(ys[1], sit.ball.y);
+  for (const r of ROLES) {
+    if (holdsBall(sit, r)) continue;
+    for (const z of [f.target[r], f.target[r].alt]) {
+      if (!z || z.y + z.hh <= line + ONSIDE_GIVE) continue;
+      const y2 = line + ONSIDE_GIVE, y1 = Math.min(z.y - z.hh, y2 - 4);
+      z.y = (y1 + y2) / 2;
+      z.hh = (y2 - y1) / 2;
+    }
+    f.blue[r] = { x: f.target[r].x, y: f.target[r].y };
+  }
 }
 
 const isTrans = sit => sit.phase === 'lost' || sit.phase === 'won' || sit.phase === 'loose';
@@ -1506,12 +2553,13 @@ function drawPitch(svg, id) {
   return { layers, boOpp, boOwn, id };
 }
 
-function makePlayer(layer, team, label, you) {
+function makePlayer(layer, team, label, you, scale) {
   const g = el('g', { class: 'pl ' + team + (you ? ' you' : '') }, layer);
-  el('circle', { r: 2.5, class: 'you-pulse' }, g);
-  el('circle', { r: 1.6, class: 'body' }, g);
-  if (label) txt(g, 0, 0.05, label, 'lbl', { 'dominant-baseline': 'central' });
-  txt(g, 0, -2.3, '★', 'star', { 'dominant-baseline': 'central' });
+  const inner = scale ? el('g', { transform: `scale(${scale})` }, g) : g;
+  el('circle', { r: 2.5, class: 'you-pulse' }, inner);
+  el('circle', { r: 1.6, class: 'body' }, inner);
+  if (label) txt(inner, 0, 0.05, label, 'lbl', { 'dominant-baseline': 'central' });
+  txt(inner, 0, -2.3, '★', 'star', { 'dominant-baseline': 'central' });
   return g;
 }
 function place(g, p) { g.setAttribute('transform', `translate(${p.x.toFixed(2)} ${sy(p.y).toFixed(2)})`); }
@@ -1525,6 +2573,62 @@ function makeBall(layer) {
   }
   el('polygon', { points: pts5.join(' '), class: 'ball-p' }, g);
   return g;
+}
+/* ---------------- zoomed views (attacking scenes) ----------------
+   The same SVG, cropped: 'box' looks at their end of the pitch, 'goal'
+   at a goal drawn off to the side, seen from the shooter's spot.
+   Both views share one shape, so the layout doesn't jump between them. */
+const VIEWBOX = { full: '-4 -4.6 50 69.2', box: '-2.5 -3.2 45 27.6', goal: '197.2 -4.05 9.6 5.888' };
+const BOX_SCALE = 0.72; // players and ball are drawn smaller when zoomed in
+const GF_X = 200;       // where the goal-face drawing lives: left post at x 200, ground at y 0
+function setView(mode) {
+  Q.view = mode;
+  Q.svg.setAttribute('viewBox', VIEWBOX[mode]);
+  $('#quiz').classList.toggle('zoom', mode !== 'full');
+  $('#lgPath').hidden = mode === 'full';
+  $('.legend').hidden = mode === 'goal'; // Us / Them / You mean nothing on the goal view
+  Q.svg.setAttribute('aria-label', mode === 'goal' ? 'Their goal, seen from where you are shooting. Drag the ball to where you would aim.'
+    : mode === 'box' ? "Their end of the pitch. Watch the play, then answer." : 'Soccer pitch. Drag your YOU dot to where you should be.');
+}
+// A ball that can fly: the inner part lifts and grows, a shadow stays on the ground.
+function makeBoxBall(layer) {
+  const g = el('g', { class: 'ball' }, layer);
+  g._shadow = el('ellipse', { rx: 0.62, ry: 0.36, class: 'ball-shadow', opacity: 0 }, g);
+  g._inner = el('g', null, g);
+  makeBall(g._inner);
+  placeBall(g, { x: 0, y: L }, 0);
+  return g;
+}
+function placeBall(g, p, h) {
+  place(g, p);
+  g._inner.setAttribute('transform', `translate(0 ${(-1.8 * h).toFixed(2)}) scale(${(BOX_SCALE * (1 + 0.6 * h)).toFixed(3)})`);
+  g._shadow.setAttribute('opacity', (0.5 * h).toFixed(2));
+}
+function drawGoalFace(svg) {
+  const g = el('g', { class: 'goalface' }, svg), X = GF_X;
+  el('rect', { x: X - 3, y: -4.2, width: 12, height: 3.3, class: 'gf-sky' }, g);
+  el('rect', { x: X - 3, y: -0.9, width: 12, height: 0.9, class: 'gf-far' }, g);
+  el('rect', { x: X - 3, y: 0, width: 12, height: 2, class: 'gf-grass' }, g);
+  for (let i = 0; i < 3; i++) el('rect', { x: X - 3, y: 0.25 + i * 0.6, width: 12, height: 0.3, class: 'gf-stripe' }, g);
+  el('line', { x1: X - 3, y1: 0, x2: X + 9, y2: 0, class: 'gf-line' }, g);
+  el('rect', { x: X, y: -2, width: 6, height: 2, class: 'gf-net' }, g);
+  for (let i = 1; i < 24; i++) el('line', { x1: X + i * 0.25, y1: -2, x2: X + i * 0.25, y2: 0, class: 'gf-mesh' }, g);
+  for (let i = 1; i < 8; i++) el('line', { x1: X, y1: -i * 0.25, x2: X + 6, y2: -i * 0.25, class: 'gf-mesh' }, g);
+  el('rect', { x: X - 0.13, y: -2.13, width: 0.13, height: 2.13, class: 'gf-post' }, g);
+  el('rect', { x: X + 6, y: -2.13, width: 0.13, height: 2.13, class: 'gf-post' }, g);
+  el('rect', { x: X - 0.13, y: -2.13, width: 6.26, height: 0.13, class: 'gf-post' }, g);
+  return { g, layer: el('g', null, g) };
+}
+// Their keeper, facing us. kx: across the goal (0–6). big: rushing out, so bigger.
+function drawKeeper(layer, kx, big) {
+  const s = big ? 1.3 : 1, g = el('g', { transform: `translate(${GF_X + kx} 0) scale(${s})` }, layer);
+  el('rect', { x: -0.2, y: -0.62, width: 0.14, height: 0.62, rx: 0.05, class: 'gk-shorts' }, g);
+  el('rect', { x: 0.06, y: -0.62, width: 0.14, height: 0.62, rx: 0.05, class: 'gk-shorts' }, g);
+  el('rect', { x: -0.27, y: -1.12, width: 0.54, height: 0.58, rx: 0.12, class: 'gk-kit' }, g);
+  el('path', { d: 'M-0.24 -1.04 L-0.78 -0.72 M0.24 -1.04 L0.78 -0.72', class: 'gk-arm' }, g);
+  el('circle', { cx: -0.8, cy: -0.7, r: 0.09, class: 'gk-glove' }, g);
+  el('circle', { cx: 0.8, cy: -0.7, r: 0.09, class: 'gk-glove' }, g);
+  el('circle', { cx: 0, cy: -1.3, r: 0.17, class: 'gk-skin' }, g);
 }
 function zoneRect(z) {
   return { x1: Math.max(0, z.x - z.hw), x2: Math.min(W, z.x + z.hw), y1: Math.max(0, z.y - z.hh), y2: Math.min(L, z.y + z.hh) };
@@ -1577,10 +2681,10 @@ function pickVoice() {
   } catch (e) { voice.pick = null; }
 }
 if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function speak(text, force) {
+function speak(text, force, queue) {
   if (!canSpeak || !text || (!voice.on && !force)) return;
   try {
-    speechSynthesis.cancel();
+    if (!queue) speechSynthesis.cancel(); // queue: say it after whatever is being said now
     const clean = text.replace(/[^\p{L}\p{N}\p{P}\s]/gu, '').replace(/\s+/g, ' ').trim();
     // Short chunks: some browsers cut off long utterances.
     for (const part of clean.match(/[^.!?]+[.!?]*/g) || []) {
@@ -1691,6 +2795,12 @@ function initSetup() {
     g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRole(r); } });
     S.picks[r] = g;
   }
+  // 🎯 is new: switch it on once for anyone whose ticked categories were saved before it existed.
+  if (!store.get('boxOn', false)) {
+    if (!state.phases.includes('box')) state.phases = [...state.phases, 'box'];
+    store.set('phases', state.phases);
+    store.set('boxOn', true);
+  }
   const nameInput = $('#nameInput');
   nameInput.value = state.name;
   nameInput.addEventListener('input', () => { state.name = nameInput.value.trim(); store.set('name', state.name); });
@@ -1701,6 +2811,7 @@ function initSetup() {
       if (!on.length) { inp.checked = true; return; }
       state.phases = on;
       store.set('phases', on);
+      renderBoxNote();
     });
   });
   const hard = $('#hardInput');
@@ -1732,17 +2843,48 @@ function selectRole(r) {
   $('#roleName').textContent = INFO[r].name;
   const best = store.get('best:' + r, null);
   $('#roleBest').textContent = best ? `Best: ${best.stars} of ${best.max} ⭐` : '';
+  renderBoxNote();
+}
+function renderBoxNote() {
+  $('#boxNote').hidden = !(state.phases.includes('box') && !BOX_ROLES.includes(state.role));
 }
 
 /* ---------------- quiz ---------------- */
 const Q = {};
 const cur = () => state.round[state.i];
 
+/* A round is 10 questions from the ticked categories. With Shooting &
+   crossing ticked, the Center Mid, wings and Striker get 10 attacking
+   scenes on top, so their round is 20. */
 function buildRound() {
+  const role = state.role, wantBox = state.phases.includes('box') && BOX_ROLES.includes(role);
+  let cats = state.phases.filter(c => c !== 'box');
+  if (!cats.length && !wantBox) cats = ['gk', 'open', 'trans']; // only 🎯 ticked, but this position has none
+  const boxN = wantBox ? Math.min(10, boxAsks(role).length) : 0;
+  const regN = !cats.length ? 0 : wantBox ? 20 - boxN : 10;
+  const regular = regN ? buildRegular(cats, regN) : [];
+  return shuffle([...regular, ...(boxN ? pickBox(role, boxN) : [])]);
+}
+// Each game's attacking scenes: exactly 2 loose balls in the box, wingers exactly 3 byline runs, the rest a mix.
+function pickBox(role, n) {
+  const groups = shuffle(boxAsks(role)), tags = g => g[0].ask[role].tags || [];
+  const quota = { loose: 2 };
+  if (role === 'LW' || role === 'RW') quota.byline = 3;
+  const chosen = [];
+  for (const tag in quota) chosen.push(...groups.filter(g => tags(g).includes(tag) && !chosen.includes(g)).slice(0, quota[tag]));
+  const rest = groups.filter(g => !chosen.includes(g));
+  const plain = rest.filter(g => !tags(g).some(t => t in quota)); // keep the quotas exact when there's enough else
+  for (const g of [...plain, ...rest]) if (chosen.length < n && !chosen.includes(g)) chosen.push(g);
+  return shuffle(chosen.slice(0, n)).map(variants => {
+    const sc = pick(variants);
+    return { box: true, sc, ask: sc.ask[role], role, stars: null };
+  });
+}
+function buildRegular(phases, N) {
   const pools = { gk: [], open: [], trans: [] };
   for (const sit of SITUATIONS) {
     const cat = PHASES[sit.phase].cat;
-    if (!state.phases.includes(cat) || holdsBall(sit, state.role)) continue;
+    if (!phases.includes(cat) || holdsBall(sit, state.role)) continue;
     pools[cat].push(sit);
   }
   Object.values(pools).forEach(shuffle);
@@ -1750,8 +2892,8 @@ function buildRound() {
   const mine = pools.trans.findIndex(s => s.phase === 'lost' && s.carrier === state.role);
   if (mine > 0) pools.trans.unshift(pools.trans.splice(mine, 1)[0]);
 
-  const N = 10, weights = { gk: 2, open: 4, trans: 4 };
-  const cats = state.phases.filter(c => pools[c].length);
+  const weights = { gk: 2, open: 4, trans: 4 };
+  const cats = phases.filter(c => pools[c].length);
   const totalW = cats.reduce((a, c) => a + weights[c], 0);
   const quota = {};
   cats.forEach(c => { quota[c] = Math.min(pools[c].length, Math.round(N * weights[c] / totalW)); });
@@ -1799,6 +2941,7 @@ function moveYou(p) {
   }
 }
 function onDown(e) {
+  if (!state.coach && Q.bx) return boxDown(e);
   if (state.coach || state.step !== 'place' || !cur()) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   e.preventDefault();
@@ -1812,6 +2955,7 @@ function onDown(e) {
 function onMove(e) {
   if (!Q.dragging) return;
   e.preventDefault();
+  if (Q.bx) return boxMoveEv(e);
   const p = svgPt(e);
   if (p) moveYou({ x: p.x + Q.off.x, y: p.y + Q.off.y });
 }
@@ -1838,6 +2982,10 @@ function onYouKey(e) {
 function initQuiz() {
   Q.svg = $('#pitch');
   Q.P = drawPitch(Q.svg, 'q');
+  Q.gf = drawGoalFace(Q.svg);
+  Q.animToken = 0;
+  setView('full');
+  $('#replayBtn').addEventListener('click', replayBox);
   Q.svg.addEventListener('pointerdown', onDown);
   Q.svg.addEventListener('pointermove', onMove);
   Q.svg.addEventListener('pointerup', onUp);
@@ -1851,8 +2999,8 @@ function initQuiz() {
   $('#homeBtn').addEventListener('click', () => { hush(); show('setup'); });
   $('#againBtn').addEventListener('click', startRound);
   $('#changeBtn').addEventListener('click', () => { hush(); show('setup'); });
-  $('#coachPrev').addEventListener('click', () => { state.ci = (state.ci - 1 + SITUATIONS.length) % SITUATIONS.length; renderCoach(); });
-  $('#coachNext').addEventListener('click', () => { state.ci = (state.ci + 1) % SITUATIONS.length; renderCoach(); });
+  $('#coachPrev').addEventListener('click', () => { state.ci = (state.ci - 1 + COACH.length) % COACH.length; renderCoach(); });
+  $('#coachNext').addEventListener('click', () => { state.ci = (state.ci + 1) % COACH.length; renderCoach(); });
   const sel = $('#coachRole');
   for (const r of ROLES) { const o = document.createElement('option'); o.value = r; o.textContent = INFO[r].name; sel.appendChild(o); }
   sel.addEventListener('change', () => { selectRole(sel.value); renderCoach(); });
@@ -1861,6 +3009,10 @@ function initQuiz() {
 function clearPitch() {
   const Ls = Q.P.layers;
   for (const k in Ls) Ls[k].textContent = '';
+  Q.gf.layer.textContent = '';
+  Q.animToken++; // stops any scene still playing
+  Q.bx = null;
+  Q.dragging = false;
   Q.teamZones = null;
   Q.arrow = null;
   Q.zone = null;
@@ -1902,10 +3054,16 @@ function setPrompt(tag, text, say) {
 
 // Step 1: where should you be?
 function renderQuestion() {
+  if (cur().box) return renderBox(cur());
   const q = cur(), f = q.frame, sit = q.sit, Ls = Q.P.layers;
   state.step = 'place';
   state.moved = q.trans;
   clearPitch();
+  setView('full');
+  $('#replayBtn').hidden = true;
+  $('#teamBtn').hidden = false;
+  $('#chkMove').hidden = false;
+  $('#checkBtn').textContent = "That's my spot ✅";
   drawRestriction(Q.P, sit.phase);
 
   const pos = q.trans ? f.before : f;
@@ -1956,6 +3114,7 @@ function renderQuestion() {
 // Step 2: what should you do? (Nothing is revealed until this is answered.)
 function lockSpot() {
   const q = cur();
+  if (q && q.box) return boxConfirm();
   if (!q || state.step !== 'place' || !state.moved) return;
   state.step = 'act';
   Q.dragging = false;
@@ -2022,11 +3181,19 @@ function answer(i) {
   if (q.spot.stars < 3) drawArrow(p, z);
 
   const fb = feedbackFor(q, moveOk);
+  $('#showMeBtn').hidden = q.spot.stars === SPOT_MAX;
+  $('#teamBtn').textContent = '👥 Team';
+  showAnswer(fb, total, [`📍 Spot ${fb.spotOk ? '✅' : '❌'}`, `⚡ Move ${moveOk ? '✅' : '❌'}`]);
+}
+
+// The answer box, for both kinds of question.
+function showAnswer(fb, total, chips) {
   $('#answer').className = 'answer ' + fb.kind;
   $('#vTitle').textContent = fb.title;
   $('#vScore').textContent = `⭐ ${total}/${Q_MAX}`;
-  $('#chkSpot').textContent = `📍 Spot ${fb.spotOk ? '✅' : '❌'}`;
-  $('#chkMove').textContent = `⚡ Move ${moveOk ? '✅' : '❌'}`;
+  $('#chkSpot').textContent = chips[0];
+  $('#chkMove').textContent = chips[1] || '';
+  $('#chkMove').hidden = !chips[1];
   const body = $('#answerBody');
   body.textContent = '';
   const said = [];
@@ -2047,14 +3214,13 @@ function answer(i) {
     }
     body.appendChild(p);
   }
-  $('#showMeBtn').hidden = q.spot.stars === SPOT_MAX;
-  $('#teamBtn').textContent = '👥 Team';
   $('#nextBtn').textContent = state.i + 1 < state.round.length ? 'Next ➜' : 'Score 🏆';
   $('#starTotal').textContent = state.stars;
   showPanel('post');
   renderDots();
 
-  Q.sayResult = `${fb.title} ${said.join(' ')}`;
+  // "Let's learn this one 💡" has no full stop once the emoji is dropped, so add one: otherwise it runs into the next sentence
+  Q.sayResult = `${sentence(fb.title.replace(/[^\p{L}\p{N}\p{P}\s]/gu, '').trim())} ${said.join(' ')}`;
   speak(Q.sayResult);
   if (total === Q_MAX) confetti(40);
   $('#nextBtn').focus({ preventScroll: true });
@@ -2076,6 +3242,7 @@ function drawArrow(from, z) {
   }, Q.P.layers.arrows);
 }
 function showMe() {
+  if (Q.bx) return showMeBox();
   const z = cur().zone;
   if (Q.arrow) { Q.arrow.remove(); Q.arrow = null; }
   animateMoves([{ g: Q.you, from: { ...Q.youPos }, to: { x: z.x, y: z.y } }], 700);
@@ -2108,6 +3275,533 @@ function next() {
   }
 }
 
+/* ---------------- shooting & crossing ----------------
+   A scene plays its lead-up, freezes, then asks its steps one by one.
+   Q.bx holds the scene in play: where everyone is (pos), the path each
+   one took (paths, drawn as trails), and the answers so far. */
+const STEP_INFO = {
+  choose: { ico: '⚡', chip: 'Move', label: 'What to do:', tag: 'Your move' },
+  place: { ico: '📍', chip: 'Spot', label: 'Where to be:', tag: 'Your spot' },
+  aim: { ico: '🎯', chip: 'Ball', label: 'Where the ball goes:', tag: 'Where it goes' },
+  shot: { ico: '🥅', chip: 'Shot', label: 'Your shot:', tag: 'Your shot' },
+};
+const GRADE_MARK = ['❌', '🟡', '✅'];
+const SHOT_BEST = 'Aim low, just inside the post, away from the keeper';
+const SHOT_WHY = 'Low shots are the hardest for a keeper to reach, and aiming just inside the post keeps it on target.';
+// One question is worth 5 stars: a one-step scene puts all 5 on it, a two-step scene splits 3 + 2.
+const stepMax = (ask, i) => (ask.steps.length === 1 ? Q_MAX : i === 0 ? SPOT_MAX : MOVE_POINTS);
+const gradePts = (g, max) => (g === 2 ? max : g === 1 ? Math.max(1, Math.round(max * 0.4)) : 0);
+const lcFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
+const P = a => ({ x: a[0], y: a[1] });
+function fillRoles(s, role) {
+  if (!s) return '';
+  const out = s.replace(/\{(LW|RW|ST|CM|LD|RD)\}/g, (m, r) => (r === role ? 'you' : 'our ' + INFO[r].name));
+  return out.replace(/(^|[.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase());
+}
+function bestTextOf(st) {
+  if (st.type === 'choose') return st.opts.filter(o => o[1] === 2).map(o => o[0]).join(', or ');
+  if (st.type === 'place') return st.where;
+  if (st.type === 'aim') return st.targets.reduce((a, t) => (t.g > a.g ? t : a)).text;
+  return SHOT_BEST;
+}
+
+// --- moving everyone ---
+function timeline(pos, beats) {
+  const segs = {}, end = Object.assign({}, pos);
+  let t = 0;
+  for (const b of beats) {
+    for (const k in b) {
+      if (k === 'ms' || k === 'air') continue;
+      (segs[k] = segs[k] || []).push({ t0: t, t1: t + b.ms, a: end[k], b: b[k], air: k === 'ball' && !!b.air });
+      end[k] = b[k];
+    }
+    t += b.ms;
+  }
+  return { segs, end, dur: t };
+}
+function segAt(list, t) {
+  let s = list[0];
+  for (const x of list) if (t >= x.t0) s = x;
+  const u = s.t1 > s.t0 ? clamp((t - s.t0) / (s.t1 - s.t0), 0, 1) : 1;
+  return { x: s.a[0] + (s.b[0] - s.a[0]) * u, y: s.a[1] + (s.b[1] - s.a[1]) * u, h: s.air ? Math.sin(Math.PI * u) : 0 };
+}
+function drawActor(B, id, p) {
+  const g = B.els[id];
+  if (!g) return;
+  if (id === 'ball') placeBall(g, p, p.h || 0); else place(g, p);
+}
+function drawActors(B) { for (const id in B.pos) drawActor(B, id, P(B.pos[id])); }
+// Play beats from where everyone is now. walk: { id: [from, to] } moves someone over the whole clip.
+function playBeats(B, beats, walk) {
+  return new Promise(resolve => {
+    const tl = timeline(B.pos, beats);
+    for (const id in walk || {}) {
+      tl.segs[id] = [{ t0: 0, t1: tl.dur, a: walk[id][0], b: walk[id][1], air: false }];
+      tl.end[id] = walk[id][1];
+    }
+    for (const id in tl.segs) {
+      const path = B.paths[id] || (B.paths[id] = [B.pos[id]]);
+      for (const s of tl.segs[id]) path.push(s.b);
+    }
+    const token = ++Q.animToken;
+    const finish = () => { B.pos = tl.end; drawActors(B); resolve(); };
+    if (reduceMotion || !tl.dur) { finish(); return; }
+    const t0 = performance.now();
+    const step = now => {
+      if (token !== Q.animToken) return; // a replay or the next question took over
+      const t = now - t0;
+      for (const id in tl.segs) drawActor(B, id, segAt(tl.segs[id], t));
+      if (t < tl.dur) requestAnimationFrame(step); else finish();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function drawTrails(B) {
+  B.trailG.textContent = '';
+  for (const id in B.paths) {
+    const pts = B.paths[id];
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (len < 0.8) continue;
+    el('polyline', { points: pts.map(p => `${p[0]},${sy(p[1])}`).join(' '), class: id === 'ball' ? 'btrail' : 'trail' }, B.trailG);
+  }
+}
+// The lead-up. If the question says where YOU are (from), you walk there instead of following the play.
+function playLead(B) {
+  const role = B.ask && B.ask.from ? B.role : null;
+  const beats = role ? B.sc.play.map(b => { const c = Object.assign({}, b); delete c[role]; return c; }) : B.sc.play;
+  return playBeats(B, beats, role ? { [role]: [B.sc.at[role], B.ask.from] } : null).then(() => drawTrails(B));
+}
+function makeActors(B) {
+  const Ls = Q.P.layers;
+  B.els = {};
+  for (const id in B.sc.at) {
+    if (id === 'ball') continue;
+    const blue = ROLES.includes(id), you = !B.coach && id === B.role;
+    const label = you ? 'YOU' : blue ? id : id === 'K' ? 'GK' : '';
+    const g = makePlayer(you ? Ls.you : Ls.players, blue ? 'blue' : 'white', label, you, BOX_SCALE);
+    if (B.coach && id === B.me) g.classList.add('me');
+    if (you) {
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', 'Your player. Drag it, or use the arrow keys, then press Enter.');
+      g.addEventListener('keydown', boxKey);
+    }
+    B.els[id] = g;
+  }
+  B.els.ball = makeBoxBall(Ls.players);
+}
+function watching() {
+  showPanel('pre');
+  const b = $('#checkBtn');
+  b.textContent = 'Watch… 👀';
+  b.disabled = true;
+}
+
+// --- a question ---
+function renderBox(q) {
+  const sc = q.sc, ask = q.ask;
+  clearPitch();
+  setView('box');
+  drawRestriction(Q.P, null);
+  const B = Q.bx = { q, sc, ask, role: q.role, si: 0, results: [], ready: false, paths: {}, pos: Object.assign({}, sc.at) };
+  state.step = 'watch';
+  B.trailG = el('g', null, Q.P.layers.arrows);
+  makeActors(B);
+  drawActors(B);
+
+  const poss = $('#poss');
+  poss.className = 'poss we';
+  poss.textContent = '🔵 ' + fillRoles(sc.pill, q.role);
+  $('#youRole').textContent = INFO[q.role].name;
+  $('#starBox').hidden = false;
+  $('#qdots').hidden = false;
+  $('#readBtn').hidden = !canSpeak;
+  $('#replayBtn').hidden = false;
+  $('#teamBtn').hidden = true;
+  $('#starTotal').textContent = state.stars;
+  renderDots();
+  watching();
+
+  const st = ask.steps[0], text = fillRoles(st.q || defaultQ(st), q.role);
+  const who = (state.name ? state.name + ', you' : 'You') + `'re the ${INFO[q.role].name}.`;
+  B.intro = `${who} ${sentence(fillRoles(sc.pill, q.role))}`;
+  $('#stepTag').textContent = stepTag(B);
+  $('#qtext').textContent = text;
+  Q.say = `${B.intro} ${text}`;
+  speak(Q.say);
+  playLead(B).then(() => boxStep(B));
+}
+const defaultQ = st => (st.type === 'shot' ? 'Where do you aim your shot? Drag the ball into the goal.' : 'What should you do?');
+const stepTag = B => (B.ask.steps.length > 1 ? `${B.si + 1}. ` : '') + STEP_INFO[B.ask.steps[B.si].type].tag;
+
+function boxStep(B) {
+  if (Q.bx !== B) return;
+  const st = B.ask.steps[B.si], text = fillRoles(st.q || defaultQ(st), B.role);
+  B.ready = true;
+  state.step = 'box';
+  $('#replayBtn').hidden = st.type === 'shot';
+  $('#stepTag').textContent = stepTag(B);
+  $('#qtext').textContent = text;
+  const first = B.si === 0;
+  if (st.type === 'choose') {
+    B.opts = shuffle(st.opts.map(([t, g, why, to]) => ({ text: fillRoles(t, B.role), g, why: fillRoles(why, B.role), to })));
+    const box = $('#options');
+    box.textContent = '';
+    B.opts.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt';
+      const letter = document.createElement('span');
+      letter.className = 'letter';
+      letter.textContent = 'ABCDE'[i];
+      const label = document.createElement('span');
+      label.textContent = o.text;
+      b.append(letter, label);
+      b.addEventListener('click', () => boxChoose(i));
+      box.appendChild(b);
+    });
+    showPanel('act');
+    const opts = B.opts.map((o, i) => `${'ABCDE'[i]}: ${sentence(o.text)}`).join(' ');
+    Q.say = first ? `${B.intro} ${text} ${opts}` : `${text} ${opts}`;
+    speak(first ? opts : Q.say, false, first);
+    box.querySelector('.opt').focus({ preventScroll: true });
+    // side by side on a short screen: bring the options up if they start below it
+    requestAnimationFrame(() => {
+      const r = box.getBoundingClientRect();
+      if (!oneColumn() && r.top > innerHeight - 80) window.scrollBy({ top: r.top - innerHeight + 140, behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+    return;
+  }
+  showPanel('pre');
+  const btn = $('#checkBtn');
+  if (st.type === 'place') {
+    startDrag(B, B.els[B.role], P(B.pos[B.role]), 'field');
+    btn.textContent = "That's my spot ✅";
+    btn.disabled = false;
+  } else if (st.type === 'aim') {
+    const ball = B.pos.ball, mk = el('g', { class: 'aim-mark', tabindex: 0, role: 'button', 'aria-label': 'Where the ball goes. Drag it, or use the arrow keys, then press Enter.' }, Q.P.layers.you);
+    el('circle', { r: 1.3, class: 'ring' }, mk);
+    makeBall(el('g', { transform: `scale(${BOX_SCALE})` }, mk));
+    mk.addEventListener('keydown', boxKey);
+    B.aimLine = el('line', { class: 'aim-line' }, Q.P.layers.arrows);
+    B.hint = txt(Q.P.layers.you, ball[0], sy(ball[1]) + 2.4, 'drag me!', 'drag-hint');
+    startDrag(B, mk, P(ball), 'field');
+    btn.textContent = 'Kick it here ⚽';
+    btn.disabled = true;
+  } else {
+    setView('goal');
+    const lay = Q.gf.layer;
+    drawKeeper(lay, st.kx, st.big);
+    B.hint = txt(lay, GF_X + 3, -3.15, 'Drag the ball to where you would aim', 'gf-hint');
+    const mk = el('g', { class: 'aim-mark small', tabindex: 0, role: 'button', 'aria-label': 'Your shot. Drag it into the goal, or use the arrow keys, then press Enter.' }, lay);
+    el('circle', { r: 0.34, class: 'ring' }, mk);
+    makeBall(el('g', { transform: 'scale(.26)' }, mk));
+    mk.addEventListener('keydown', boxKey);
+    startDrag(B, mk, { x: 3, y: -1.3 }, 'goal');
+    btn.textContent = 'Shoot! ⚽';
+    btn.disabled = true;
+  }
+  Q.say = first ? `${B.intro} ${text}` : text;
+  if (!first) speak(text);
+  B.drag.g.focus({ preventScroll: true });
+}
+
+// --- dragging YOU, the pass, or the shot ---
+function startDrag(B, g, pos, kind) {
+  B.drag = { g, pos, kind, moved: false };
+  g.classList.remove('locked');
+  moveDragTo(B, pos, true);
+}
+function moveDragTo(B, p, init) {
+  const d = B.drag;
+  if (d.kind === 'goal') {
+    p = { x: clamp(p.x, -1.6, 7.6), y: clamp(p.y, init ? -1.5 : -0.4, 3.4) };
+    d.g.setAttribute('transform', `translate(${(GF_X + p.x).toFixed(2)} ${(-p.y).toFixed(2)})`);
+  } else {
+    p = { x: clamp(p.x, -2, 42), y: clamp(p.y, 36.5, 62.5) };
+    place(d.g, p);
+    if (B.aimLine) {
+      const b = B.pos.ball;
+      for (const [k, v] of [['x1', b[0]], ['y1', sy(b[1])], ['x2', p.x], ['y2', sy(p.y)]]) B.aimLine.setAttribute(k, v);
+    }
+  }
+  d.pos = p;
+  if (!init) {
+    d.moved = true;
+    $('#checkBtn').disabled = false;
+    if (B.hint) { B.hint.remove(); B.hint = null; }
+  }
+}
+function boxPt(e) {
+  const m = Q.svg.getScreenCTM();
+  if (!m) return null;
+  const pt = Q.svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const p = pt.matrixTransform(m.inverse());
+  return Q.bx.drag.kind === 'goal' ? { x: p.x - GF_X, y: -p.y } : { x: p.x, y: L - p.y };
+}
+function boxDown(e) {
+  const B = Q.bx;
+  if (!B || !B.ready || !B.drag || state.step !== 'box') return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+  const p = boxPt(e);
+  if (!p) return;
+  Q.dragging = true;
+  try { Q.svg.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  if (B.drag.g.contains(e.target)) Q.off = { x: B.drag.pos.x - p.x, y: B.drag.pos.y - p.y };
+  else { Q.off = { x: 0, y: 0 }; moveDragTo(B, p); }
+}
+function boxMoveEv(e) {
+  const B = Q.bx;
+  if (!B || !B.drag) return;
+  const p = boxPt(e);
+  if (p) moveDragTo(B, { x: p.x + Q.off.x, y: p.y + Q.off.y });
+}
+function boxKey(e) {
+  const B = Q.bx;
+  if (!B || !B.ready || !B.drag || state.step !== 'box' || !B.drag.g.contains(e.target)) return;
+  const goal = B.drag.kind === 'goal', s = goal ? (e.shiftKey ? 0.5 : 0.15) : (e.shiftKey ? 2 : 0.5);
+  const p = { ...B.drag.pos };
+  if (e.key === 'ArrowUp') p.y += s;
+  else if (e.key === 'ArrowDown') p.y -= s;
+  else if (e.key === 'ArrowLeft') p.x -= s;
+  else if (e.key === 'ArrowRight') p.x += s;
+  else if (e.key === 'Enter') { e.preventDefault(); if (!$('#checkBtn').disabled) boxConfirm(); return; }
+  else return;
+  e.preventDefault();
+  moveDragTo(B, p);
+}
+
+// --- scoring each kind of step ---
+function boxChoose(i) {
+  const B = Q.bx;
+  if (!B || !B.ready || state.step !== 'box' || B.ask.steps[B.si].type !== 'choose') return;
+  B.ready = false;
+  const o = B.opts[i], max = stepMax(B.ask, B.si);
+  // When more than one answer is right, the one you picked leads and the others are mentioned too.
+  const rights = B.opts.filter(x => x.g === 2), best = o.g === 2 ? o : rights.find(x => x.to) || rights[0];
+  const alts = rights.filter(x => x !== best).map(x => ({ text: x.text, why: x.why }));
+  finishStep(B, { type: 'choose', g: o.g, pts: gradePts(o.g, max), max, said: o.g === 2 ? '' : o.why, best: best.text, why: best.why, show: best.to, alts });
+}
+function boxConfirm() {
+  const B = Q.bx;
+  if (!B || !B.ready || !B.drag || state.step !== 'box') return;
+  const st = B.ask.steps[B.si], max = stepMax(B.ask, B.si), p = B.drag.pos;
+  if (st.type !== 'place' && !B.drag.moved) return;
+  B.ready = false;
+  Q.dragging = false;
+  B.drag.g.classList.add('locked');
+  if (st.type === 'place') return finishStep(B, scorePlace(B, st, p, max));
+  if (st.type === 'shot') return finishStep(B, scoreShot(B, st, p, max));
+  const r = scoreAim(B, st, p, max);
+  if (B.aimLine) { B.aimLine.remove(); B.aimLine = null; }
+  playBeats(B, [{ ms: 550, ball: r.end, air: B.ask.lofted ? 1 : 0 }]).then(() => { drawTrails(B); finishStep(B, r); });
+}
+function scorePlace(B, st, p, max) {
+  const zones = st.zones.map(([x, y, hw, hh]) => ({ x, y, hw, hh }));
+  const d = Math.min(...zones.map(z => distToZone(p, z)));
+  const trap = (st.traps || []).find(([x1, y1, x2, y2]) => p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2);
+  const off = p.x < 0 || p.x > W || p.y > L;
+  let pts = d === 0 ? max : d <= 3 ? Math.round(max * 0.6) : d <= 6 ? 1 : 0;
+  if (off || (trap && d > 0)) pts = 0;
+  const g = pts === max ? 2 : pts > 0 ? 1 : 0;
+  const said = g === 2 ? '' : off ? "That spot is off the pitch!" : trap ? fillRoles(trap[4], B.role)
+    : d <= 3 ? 'Close, but not quite the best spot.' : "That's not the best spot.";
+  return { type: 'place', g, pts, max, said, best: fillRoles(st.where, B.role), why: fillRoles(st.why, B.role), pos: p, zones };
+}
+// Is one of their players standing in the way of a pass? Returns where they'd cut it out.
+function blocker(B, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], len2 = dx * dx + dy * dy || 1;
+  let hit = null;
+  for (const id in B.pos) {
+    if (id === 'ball' || ROLES.includes(id)) continue;
+    const c = B.pos[id], t = clamp(((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / len2, 0, 1);
+    if (t < 0.08) continue;
+    const x = a[0] + dx * t, y = a[1] + dy * t;
+    if (Math.hypot(c[0] - x, c[1] - y) < 1.3 && (!hit || t < hit.t)) hit = { t, at: [x, y] };
+  }
+  return hit && hit.at;
+}
+function scoreAim(B, st, p, max) {
+  const from = B.pos.ball;
+  const ts = st.targets.map(t => Object.assign({}, t, { c: t.to ? B.pos[t.to] : t.goal ? [20, 60.4] : t.at }));
+  let hit = null, close = Infinity;
+  for (const t of ts) {
+    if (t.goal) continue;
+    const d = Math.hypot(p.x - t.c[0], p.y - t.c[1]);
+    if (d <= t.r && d / t.r < close) { close = d / t.r; hit = t; }
+  }
+  const inGoal = p.x >= 16.6 && p.x <= 23.4 && p.y >= 59.2;
+  if (!hit && inGoal) hit = ts.find(t => t.goal) || null;
+  const bestT = ts.reduce((a, t) => (t.g > a.g ? t : a));
+  let g = 0, said, end = [p.x, p.y];
+  if (hit) { g = hit.g; said = g === 2 ? '' : fillRoles(hit.why, B.role); }
+  else {
+    const block = !B.ask.lofted && blocker(B, from, end);
+    const out = p.x < 0 || p.x > W || p.y > L;
+    if (inGoal) said = "That's a shot, but a pass was the better choice here.";
+    else if (block) { said = "One of their players is in the way, so they'd cut that pass out."; end = block; }
+    else if (out) said = 'That ball would go out of play.';
+    else said = "There's nobody there to get it.";
+  }
+  return { type: 'aim', g, pts: gradePts(g, max), max, said, best: fillRoles(bestT.text, B.role), why: fillRoles(bestT.why, B.role), end, from, bestC: bestT.c, pos: p };
+}
+function shotZones(kx, reach) {
+  const z = [];
+  if (kx - reach - 0.5 - 0.2 >= 0.4) z.push([0.2, kx - reach - 0.5]);
+  if (5.8 - (kx + reach + 0.5) >= 0.4) z.push([kx + reach + 0.5, 5.8]);
+  return z;
+}
+function scoreShot(B, st, p, max) {
+  const reach = st.big ? 1.3 : 1, dx = Math.abs(p.x - st.kx), y = Math.max(p.y, 0);
+  let g = 1, said;
+  if (y > 2) { g = 0; said = "That's over the bar!"; }
+  else if (p.x < 0 || p.x > 6) { g = 0; said = "That's wide of the post!"; }
+  else if (dx < reach && y < 1.7) { g = 0; said = "That's right at their keeper. Easy save!"; }
+  else if (p.x < 0.15 || p.x > 5.85) said = "Right on the post is risky. A tiny miss and it's wide, so aim just inside.";
+  else if (y <= 0.9 && dx >= reach + 0.5) { g = 2; said = ''; }
+  else if (y > 0.9) said = 'That might go in, but high shots are hard to hit and often fly over. Low is safer.';
+  else said = "That's a bit close to their keeper. Aim further away from them.";
+  return { type: 'shot', g, pts: gradePts(g, max), max, said, best: SHOT_BEST, why: SHOT_WHY, pos: p, zones: shotZones(st.kx, reach) };
+}
+
+function finishStep(B, r) {
+  if (Q.bx !== B) return;
+  B.results.push(r);
+  if (B.hint) { B.hint.remove(); B.hint = null; }
+  B.drag = null;
+  B.si++;
+  if (B.si >= B.ask.steps.length) return boxReveal(B);
+  const st = B.ask.steps[B.si];
+  state.step = 'watch';
+  if (!st.play) return enterStep(B);
+  watching();
+  $('#stepTag').textContent = stepTag(B);
+  $('#qtext').textContent = 'Watch…';
+  playBeats(B, st.play).then(() => { drawTrails(B); enterStep(B); });
+}
+const enterStep = B => (B.ask.steps[B.si].scan ? scanFlash(B).then(() => boxStep(B)) : boxStep(B));
+// "Look up!": rings sweep across every teammate and the goal, so the player
+// sees all their choices before deciding where the ball goes.
+function scanFlash(B) {
+  return new Promise(resolve => {
+    if (Q.bx !== B) return;
+    state.step = 'watch';
+    watching();
+    $('#stepTag').textContent = stepTag(B);
+    $('#qtext').textContent = '👀 Look up!';
+    speak('Look up!');
+    const lay = el('g', null, Q.P.layers.arrows), you = B.pos[B.role];
+    const label = txt(Q.P.layers.you, you[0], sy(you[1]) + 3.4, '👀 Look up!', 'scan-lbl'); // below YOU, on top of everyone
+    const spots = Object.keys(B.pos).filter(id => ROLES.includes(id) && id !== B.role).map(id => B.pos[id]).concat([[20, 59.6]]).sort((a, b) => a[0] - b[0]);
+    spots.forEach((p, i) => el('circle', { cx: p[0], cy: sy(p[1]), r: 2.2, class: 'scan-ring', style: `animation-delay: ${i * 0.22}s` }, lay));
+    setTimeout(() => { lay.remove(); label.remove(); resolve(); }, reduceMotion ? 1000 : 900 + spots.length * 220);
+  });
+}
+function replayBox() {
+  const B = Q.bx;
+  if (!B || !B.ready || state.step !== 'box' || B.ask.steps[B.si].type === 'shot') return;
+  B.ready = false;
+  state.step = 'watch';
+  Q.dragging = false;
+  if (B.drag && B.drag.g !== B.els[B.role]) B.drag.g.remove();
+  if (B.aimLine) { B.aimLine.remove(); B.aimLine = null; }
+  if (B.hint) { B.hint.remove(); B.hint = null; }
+  B.drag = null;
+  B.pos = Object.assign({}, B.sc.at);
+  B.paths = {};
+  B.trailG.textContent = '';
+  drawActors(B);
+  watching();
+  let p = playLead(B);
+  for (let i = 1; i <= B.si; i++) {
+    const play = B.ask.steps[i].play;
+    if (play) p = p.then(() => playBeats(B, play)).then(() => drawTrails(B));
+  }
+  p.then(() => enterStep(B));
+}
+
+// --- the answer ---
+function drawBestPass(from, to) {
+  const lay = Q.P.layers.arrows, dx = to[0] - from[0], dy = to[1] - from[1], len = Math.hypot(dx, dy);
+  el('circle', { cx: to[0], cy: sy(to[1]), r: 2, class: 'target-ring' }, lay);
+  if (len < 3) return;
+  const s = 1 / len, e = 2.2 / len;
+  el('line', { x1: from[0] + dx * s, y1: sy(from[1] + dy * s), x2: to[0] - dx * e, y2: sy(to[1] - dy * e), class: 'best-arrow', 'marker-end': `url(#${Q.P.id}Arrow)` }, lay);
+}
+function boxReveal(B) {
+  const q = B.q;
+  state.step = 'done';
+  $('#replayBtn').hidden = true;
+  const total = B.results.reduce((a, r) => a + r.pts, 0);
+  q.stars = total;
+  state.stars += total;
+  for (const r of B.results) {
+    if (r.type === 'place') {
+      r.zones.forEach(z => drawZone(Q.P.layers.zones, z, 'zone'));
+      if (r.g < 2) drawArrow(r.pos, nearestZone(r));
+    } else if (r.type === 'aim' && r.g < 2) drawBestPass(r.from, r.bestC);
+    else if (r.type === 'shot') {
+      const lay = Q.gf.layer;
+      for (const [x1, x2] of r.zones) lay.insertBefore(el('rect', { x: GF_X + x1, y: -0.9, width: x2 - x1, height: 0.9, class: 'gf-good' }), lay.firstChild);
+    }
+  }
+  const last = B.results[B.results.length - 1];
+  $('#showMeBtn').hidden = !(last.g < 2 && (last.type === 'place' || last.type === 'aim' || last.show));
+  $('#teamBtn').hidden = true;
+  showAnswer(boxFeedback(B), total, B.results.map(r => `${STEP_INFO[r.type].ico} ${STEP_INFO[r.type].chip} ${GRADE_MARK[r.g]}`));
+}
+const nearestZone = r => r.zones.reduce((a, z) => (distToZone(r.pos, z) < distToZone(r.pos, a) ? z : a));
+/* Same three kinds of answer box as the positioning questions:
+     all right  → one line saying why
+     some right → yes to what was right, then what was better and why
+     all wrong  → a short lesson: what to do, why, and the thing to remember */
+function boxFeedback(B) {
+  const rs = B.results, miss = B.ask.steps.find((st, i) => rs[i].g < 2);
+  const rule = RULES[(miss && (miss.rule || (miss.type === 'shot' && 'low'))) || B.ask.rule];
+  const alsoRight = r => (r.alts || []).map(a => ` Another right answer: ${lcFirst(sentence(a.text))}`).join('');
+  if (rs.every(r => r.g === 2)) {
+    return { kind: 'good', title: 'Correct! 🎉', lines: [(rs.length > 1 && B.ask.good ? fillRoles(B.ask.good, B.role) : rs.map(r => r.why).join(' ')) + rs.map(alsoRight).join('')] };
+  }
+  if (rs.some(r => r.pts > 0)) {
+    const title = rs.length === 1 ? 'Not bad 👍' : rs.some(r => r.g === 2) ? 'Half right 👍' : 'Nearly! 👍';
+    const lines = rs.map(r => ({
+      ico: STEP_INFO[r.type].ico, label: '',
+      text: (r.g === 2 ? `Yes! ${sentence(r.best)}` : `${r.said} Better: ${lcFirst(sentence(r.best))} ${r.why}`) + alsoRight(r),
+    }));
+    lines.push({ ico: '🧠', label: 'Remember:', text: rule });
+    return { kind: 'half', title, lines };
+  }
+  return {
+    kind: 'learn', title: "Let's learn this one 💡",
+    lines: [rs[0].said, ...rs.flatMap(r => [
+      { ico: STEP_INFO[r.type].ico, label: STEP_INFO[r.type].label, text: `${sentence(r.best)} ${r.why}` },
+      ...(r.alts || []).map(a => ({ ico: '✅', label: 'Also right:', text: sentence(a.text) })),
+    ]), { ico: '🧠', label: 'Remember:', text: rule }],
+  };
+}
+function showMeBox() {
+  const B = Q.bx, r = B && B.results[B.results.length - 1];
+  if (!r) return;
+  $('#showMeBtn').hidden = true;
+  if (r.type === 'place') {
+    const z = nearestZone(r);
+    if (Q.arrow) { Q.arrow.remove(); Q.arrow = null; }
+    animateMoves([{ g: B.els[B.role], from: r.pos, to: { x: z.x, y: z.y } }], 700);
+    r.pos = { x: z.x, y: z.y };
+  } else if (r.type === 'aim') {
+    B.paths = {};
+    B.pos.ball = r.from;
+    playBeats(B, [{ ms: 750, ball: r.bestC, air: B.ask.lofted ? 1 : 0 }]);
+  } else if (r.show) {
+    // the right move: the ball goes to that teammate, or into the goal
+    B.paths = {};
+    playBeats(B, [{ ms: 750, ball: r.show === 'goal' ? [20.4, 60.6] : B.pos[r.show] }]);
+  }
+}
+
 /* ---------------- results ---------------- */
 function showResults() {
   const max = state.round.length * Q_MAX, pct = max ? state.stars / max : 0;
@@ -2124,7 +3818,7 @@ function showResults() {
   list.textContent = '';
   state.round.forEach(q => {
     const s = document.createElement('span');
-    s.textContent = `${PHASES[q.sit.phase].icon} ${q.stars || 0}/${Q_MAX}`;
+    s.textContent = `${q.box ? '🎯' : PHASES[q.sit.phase].icon} ${q.stars || 0}/${Q_MAX}`;
     list.appendChild(s);
   });
   selectRole(state.role);
@@ -2142,9 +3836,16 @@ function startCoach() {
   show('quiz');
   renderCoach();
 }
+// Coach view steps through every positioning situation, then every attacking scene.
+const COACH = [...SITUATIONS.map(sit => ({ sit })), ...BOX.map(sc => ({ sc }))];
 function renderCoach() {
-  const sit = SITUATIONS[state.ci], f = buildFrame(sit), Ls = Q.P.layers, role = state.role;
+  const item = COACH[state.ci];
+  $('#qtext').textContent = `Situation ${state.ci + 1} of ${COACH.length}`;
+  if (item.sc) return renderCoachBox(item.sc);
+  const sit = item.sit, f = buildFrame(sit), Ls = Q.P.layers, role = state.role;
   clearPitch();
+  setView('full');
+  $('#replayBtn').hidden = true;
   drawRestriction(Q.P, sit.phase);
   const iHoldIt = holdsBall(sit, role);
   if (!iHoldIt) Q.zone = drawZone(Ls.zones, f.target[role], 'zone');
@@ -2167,7 +3868,6 @@ function renderCoach() {
 
   setSituation(sit, null);
   $('#stepTag').textContent = 'Coach view';
-  $('#qtext').textContent = `Situation ${state.ci + 1} of ${SITUATIONS.length}`;
   $('#youRole').textContent = INFO[role].name;
   $('#starBox').hidden = true;
   $('#qdots').hidden = true;
@@ -2177,6 +3877,49 @@ function renderCoach() {
   $('#coachAct').textContent = iHoldIt ? '' : '⚡ ' + sentence(JOBS[z.job].act);
   $('#coachAct').hidden = iHoldIt;
   showPanel('coach');
+}
+// An attacking scene in coach view: it plays through, then shows the answers for the chosen position.
+function renderCoachBox(sc0) {
+  const role = state.role, mirror = BOX_ALL.find(s => s.id === sc0.id + '~');
+  const sc = !sc0.ask[role] && mirror.ask[role] ? mirror : sc0, ask = sc.ask[role] || null;
+  clearPitch();
+  setView('box');
+  drawRestriction(Q.P, null);
+  const B = Q.bx = { coach: true, sc, ask, role, me: role, si: 0, paths: {}, pos: Object.assign({}, sc.at) };
+  B.trailG = el('g', null, Q.P.layers.arrows);
+  makeActors(B);
+  drawActors(B);
+  const poss = $('#poss');
+  poss.className = 'poss we';
+  poss.textContent = '🔵 ' + fillRoles(sc.pill, null);
+  $('#stepTag').textContent = 'Coach view · 🎯 Shooting & crossing';
+  $('#youRole').textContent = INFO[role].name;
+  $('#starBox').hidden = true;
+  $('#qdots').hidden = true;
+  $('#readBtn').hidden = true;
+  $('#replayBtn').hidden = true;
+  const who = BOX_ROLES.filter(r => sc0.ask[r] || mirror.ask[r]).map(r => INFO[r].name).join(', ');
+  $('#coachTip').textContent = ask
+    ? ask.steps.map(st => `${STEP_INFO[st.type].ico} ${sentence(fillRoles(bestTextOf(st), role))}`).join('  ➜  ')
+    : `No question for the ${INFO[role].name} in this one. It has questions for: ${who}.`;
+  $('#coachAct').textContent = ask ? '🧠 ' + RULES[ask.rule] : '';
+  $('#coachAct').hidden = !ask;
+  showPanel('coach');
+  let p = playLead(B);
+  if (ask) for (let i = 1; i < ask.steps.length; i++) {
+    const play = ask.steps[i].play;
+    if (play) p = p.then(() => playBeats(B, play)).then(() => drawTrails(B));
+  }
+  p.then(() => {
+    if (Q.bx !== B || !ask) return;
+    for (const st of ask.steps) {
+      if (st.type === 'place') st.zones.forEach(([x, y, hw, hh]) => drawZone(Q.P.layers.zones, { x, y, hw, hh }, 'zone'));
+      if (st.type === 'aim') {
+        const t = st.targets.reduce((a, x) => (x.g > a.g ? x : a));
+        drawBestPass(B.pos.ball, t.to ? B.pos[t.to] : t.goal ? [20, 60.4] : t.at);
+      }
+    }
+  });
 }
 
 /* ---------------- go ---------------- */
