@@ -2927,32 +2927,292 @@ function povBox(B) {
 }
 // What a tap means at each step of an attacking scene.
 function povStep(B, st) {
+  B.povSnap = POV.snap(); // the moment of the decision, for the answer view if it goes wrong
+  B.povKeeper = st.type === 'shot' ? [17 + st.kx, st.big ? 57.6 : 59.3] : null;
   // A loose ball you haven't controlled yet: eyes on the ball, no looking around.
   POV.lockLook(st.type === 'choose' && B.si === 0 && (B.ask.tags || []).includes('loose'));
   if (st.type === 'choose') return POV.ask(null);
   POV.ask(st.type, p => { moveDragTo(B, p); return B.drag && B.drag.pos; }, st.type === 'shot' ? { kx: st.kx, big: !!st.big } : null);
 }
+/* The answer view. Every decision right: stay on the end result (the ball in the
+   net), looking at their goal. A mistake: go back to the moment of that decision,
+   with you where you chose to be, and draw what was better. */
 function povRevealBox(B) {
-  const zones = [], arrows = [], goalZones = [], key = [];
+  if (B.povAllRight) return POV.reveal({ look: [20, 60] });
+  const r = B.results[B.results.length - 1], zones = [], arrows = [], goalZones = [], key = [];
+  POV.restore(B.povSnap, r.type === 'place' ? [r.pos.x, r.pos.y] : null);
+  if (B.povKeeper) POV.set('K', B.povKeeper); // where their keeper stood for your shot
   let look = null;
-  for (const r of B.results) {
-    if (r.type === 'place') zones.push(...r.zones);
-    else if (r.type === 'aim') {
-      arrows.push({ from: r.from, to: r.bestC, good: true, label: 'Best' });
-      if (r.g < 2) arrows.push({ from: r.from, to: [r.pos.x, r.pos.y], good: false });
-      look = r.bestC;
-    } else if (r.type === 'shot') { goalZones.push(...r.zones); look = [20, 60]; }
-    else if (r.show && r.g < 2) {
-      const to = r.show === 'goal' ? [20, 60.2] : B.pos[r.show];
-      arrows.push({ from: B.pos.ball, to, good: true, label: 'Best' });
-      look = to;
-    }
+  if (r.type === 'place') zones.push(...r.zones);
+  else if (r.type === 'aim') {
+    arrows.push({ from: r.from, to: r.bestC, good: true, label: 'Best' });
+    arrows.push({ from: r.from, to: [r.pos.x, r.pos.y], good: false });
+    look = r.bestC;
+  } else if (r.type === 'shot') { goalZones.push(...r.zones); look = [20, 60]; }
+  else if (r.show) {
+    const to = r.show === 'goal' ? [20, 60.2] : B.pos[r.show];
+    arrows.push({ from: B.pos.ball, to, good: true, label: 'Best' });
+    look = to;
   }
   if (zones.length) key.push(['#fde047', 'Best spot']);
   if (arrows.some(a => a.good)) key.push(['#4ade80', 'Best ball']);
   if (arrows.some(a => !a.good)) key.push(['#ef4444', 'Your ball']);
   if (goalZones.length) key.push(['#4ade80', 'Best places to aim']);
   POV.reveal({ zones, arrows, goalZones, look, key });
+}
+
+/* ---------------- POV: playing it out ----------------
+   In POV mode a scene doesn't stop at your decision: it plays on, so you see
+   what your choice leads to.
+     Right: the play carries on. A good pass to a teammate in a great spot ends in
+            their goal. A good run means the ball comes to you, and you get the
+            next decision (often where to shoot), like in a real game.
+     Wrong: you see what goes wrong (blocked, saved, cut out, offside…), then the
+            question stops and the answer view shows what was better.
+   POV_PLAYS holds that for each question, step by step, keyed "scene:position",
+   written with the ball on the right like the scenes (the mirrored copies are
+   worked out). Each step has:
+     choose  opts: one entry per option, in the scene's order. A right option is
+             { play, next, end, stop }; a wrong one names what goes wrong
+             (see POV.outcome), or { kind, to } for a pass to a teammate.
+     place / aim  right: { play, next, end } for a good answer; miss: what goes
+             wrong for a bad spot (default: the pass to you gets cut out).
+     shot    nothing: a great shot goes in, anything else gets saved or misses.
+   play: beats like the scenes' ({ ms, id: [x, y], air }), plus some words for
+   spots that depend on the moment: ball 'you' (to your feet), 'touch' (a touch
+   toward goal), 'goal' (a low shot into the far corner); a player 'mark' (goal-side
+   of you) or 'ball' (onto the ball).
+   next: new steps to ask after this one (only in POV). end: the words when the
+   play ends ('goal' for GOAL!). stop: end here, skipping the scene's later steps.
+   Stars stay at 5 a question, shared across however many steps were asked. */
+const P_TOUCH = { ms: 320, ball: 'touch' }, P_SHOT = { ms: 480, ball: 'goal' }, P_TAP = { ms: 420, ball: 'goal' };
+const toYou = (ms = 800, air = 0) => ({ ms, ball: 'you', air });
+const shotStep = (q, kx, big) => ({ type: 'shot', q, kx, big: !!big, rule: 'low' });
+const P_LOOSE = { opts: [{ play: [{ ms: 380, ball: 'you' }] }, 'blocked', 'cleared'] }; // control it first, then look up
+const P_CORNER_IN = [{ right: { play: [toYou(1100, 1)] } }, { opts: [{ play: [P_TOUCH, P_SHOT], end: 'goal' }, 'over', 'letGo'] }];
+const POV_PLAYS = {
+  'cutback:RW': [{ opts: [
+    { play: [{ ms: 700, ball: [24.3, 50.2] }, P_TOUCH, P_SHOT], end: '{CM} scores from your cut-back! ⚽' },
+    { play: [{ ms: 900, RW: [32.6, 54.6], ball: [31.8, 54], a: [35.2, 57.6] }], next: [shotStep('You turned inside, past your defender. Now shoot! Where do you aim?', 4.8)] },
+    'crossBlocked', 'saved', 'tackled',
+  ] }],
+  'cutback:CM': [{ right: { play: [toYou(800)] } }, { opts: [{ play: [P_TOUCH, P_SHOT], end: 'goal' }, 'over', { kind: 'safe', to: 'RW' }] }],
+  'cutback:ST': [{ right: { play: [{ ms: 700, ball: [24.3, 50.2], b: 'mark' }, P_TOUCH, P_SHOT], end: 'Your run pulled a defender away, and {CM} scored! ⚽' } }],
+  'backpost:RW': [{ right: { play: [P_TAP], end: '{LW} taps it in at the back post! ⚽' } }],
+  'backpost:LW': [{ right: { play: [toYou(900)] } }, { opts: [{ play: [P_TAP], end: 'goal' }, 'tooSlow', 'over'] }],
+  'dribble:RW': [{ opts: [{}, 'keeper', 'saved', { kind: 'nobody', at: [25, 51] }] }, { right: { play: [P_SHOT], end: '{ST} scores! ⚽' } }],
+  'cutinShoot:RW': [{ opts: [{ play: [P_TOUCH] }, { kind: 'safe', to: 'CM' }, 'tackled'] }],
+  'cutinPass:RW': [{ right: { play: [P_TOUCH, P_SHOT], end: '{ST} scores! ⚽' } }],
+  'fastCross:ST': [{ opts: [{ play: [{ ms: 350, ball: [22.8, 52.9], ST: [22.2, 52.1] }] }, 'over', 'letGo'] }],
+  'tapIn:ST': [{ opts: [{ play: [P_TAP], end: 'goal' }, 'tooSlow', { kind: 'safe', to: 'CM' }] }],
+  'twoOnKeeper:ST': [{ right: { play: [P_TAP], end: '{LW} scores into the empty goal! ⚽' } }],
+  'twoOnKeeper:LW': [{ right: { play: [toYou(700)] } }, { opts: [{ play: [P_TAP], end: 'goal' }, 'tackled', 'over'] }],
+  'rebound:CM': [{ opts: [{ play: [{ ms: 380, ball: 'you' }] }, 'over', 'passBack'] }],
+  'rebound:ST': [{ opts: [
+    { play: [{ ms: 600, ST: [22.4, 55.2], ball: [21.7, 45.5] }, { ms: 480, ball: [21, 58.4], K: [21.4, 59] }, { ms: 380, ball: [22.2, 56.2] }, P_TAP], end: 'You followed in and scored the rebound! ⚽' },
+    'noFollow', 'noFollow',
+  ] }],
+  'rebound:LW': [{ right: { play: [{ ms: 380, ball: [21.7, 45.5] }, { ms: 480, ball: [19.2, 58.6], K: [19.8, 59] }, toYou(500), P_TAP], end: 'You were at the back post, and you scored the rebound! ⚽' }, miss: 'noFollow' }],
+  'throughBall:CM': [{ right: { play: [{ ms: 750, ST: 'ball', a: [26.4, 50.4], c: [30.6, 50.2] }, P_TOUCH, P_SHOT], end: '{ST} ran onto your pass and scored! ⚽' } }],
+  'throughBall:ST': [{ right: {
+    play: [{ ms: 1000, ball: [28.6, 52.6], ST: [28.3, 51.6], a: [26, 50.4], c: [30.8, 50.4], K: [22.6, 56.6] }],
+    next: [shotStep("{CM} played it through, and you're one-on-one with their keeper! Where do you aim?", 4.6, true)],
+  } }],
+  'oneOnOne:ST': [{ opts: [
+    {},
+    { play: [{ ms: 800, ST: [23.6, 55.2], ball: [24.2, 56.2], K: [20.8, 56.4] }, { ms: 420, ball: [20.4, 60.7, 0.2] }], end: 'You dribbled around their keeper and scored! ⚽', stop: true },
+    'over', 'tackled',
+  ] }],
+  'oneOnOne:CM': [{ right: { play: [{ ms: 450, ball: [20.8, 56.2], K: [20.8, 56.8] }, toYou(500), P_SHOT], end: 'You followed in and scored the rebound! ⚽' }, miss: 'noFollow' }],
+  'edgeShoot:CM': [{ opts: [
+    { play: [{ ms: 330, ball: 'you' }] },
+    { play: [{ ms: 800, CM: [21.6, 50], ball: [21.7, 51.1], b: [19.4, 53.6] }] },
+    { kind: 'safe', to: 'RW' }, 'over',
+  ] }],
+  'edgeBlocked:CM': [{ right: { play: [P_TOUCH, P_SHOT], end: '{RW} scores! ⚽' } }],
+  'edgeBlocked:RW': [{ right: { play: [toYou(800)], next: [shotStep('{CM} passes it to you in the box. Where do you aim?', 3.8)] } }],
+  'layoff:ST': [{ opts: [
+    { play: [{ ms: 600, ball: [21.3, 42.2] }, P_TOUCH, P_SHOT], end: '{CM} scores after your pass back! ⚽' },
+    { play: [{ ms: 900, ST: [22.2, 50.8], ball: [22.4, 52], a: [19.6, 49.8] }], next: [shotStep('You turned your defender. Now shoot! Where do you aim?', 2.8)] },
+    'blocked', 'tooSlow',
+  ] }],
+  'layoff:CM': [{ right: { play: [toYou(700)] } }, { opts: [{ play: [P_TOUCH, P_SHOT], end: 'goal' }, 'tackled', 'over'] }],
+  'cornerFree:RW': [{ right: { play: [P_TOUCH, P_SHOT], end: '{CM} scores from your corner! ⚽' } }],
+  'cornerFree:CM': P_CORNER_IN,
+  'cornerFree:ST': P_CORNER_IN,
+  'cornerShort:CM': [{ right: { play: [{ ms: 1000, RW: [31.4, 55.2], ball: [30.7, 55.5], e: [30.2, 53.8] }, P_SHOT], end: '{RW} dribbled in and scored! ⚽' } }],
+  'cornerShort:RW': [{ right: { play: [toYou(800)], next: [{
+    type: 'choose', rule: 'carry', q: '{CM} plays it short to you, and you have space. What now?',
+    opts: [
+      ['Dribble in toward the goal', 2, "You've got space, so carry the ball closer. Then you can shoot, or find a teammate."],
+      ['Cross it high into the crowd straight away', 0, 'Everyone in the box is still marked, and their keeper would catch a high ball. Use your space first.'],
+      ['Pass it straight back to {CM}', 1, 'Safe, but you had space to use. Carry it closer first.'],
+    ],
+    pov: { opts: [{ play: [{ ms: 1000, RW: [31.4, 55.2], ball: [30.7, 55.5], e: [30.2, 53.8] }, P_SHOT], end: 'You dribbled in and scored! ⚽' }, 'keeper', { kind: 'safe', to: 'CM' }] },
+  }] } }],
+  'cornerShort:ST': [{ right: { play: [toYou(1100, 1)] } }, { opts: [{ play: [P_TOUCH, P_SHOT], end: 'goal' }, 'over', 'letGo'] }],
+  'highCross:LW': [{ opts: [{ play: [{ ms: 380, ball: 'you' }] }, 'over', 'letGo'] }],
+  'freeInBox:ST': [{ opts: [{ play: [P_TOUCH] }, { kind: 'safe', to: 'RW' }, 'over'] }],
+  'switchPlay:CM': [{ right: { play: [{ ms: 900, RW: [29.4, 53.4], ball: [28.8, 54.2] }, P_SHOT], end: '{RW} had all the space to score! ⚽' } }],
+  'tooFar:CM': [{ opts: [
+    { play: [{ ms: 1300, CM: [21.2, 46.6], ball: [21.3, 47.8], d: [23, 44.6], a: [16.8, 51.4], b: [25.8, 51.4] }], next: [shotStep('You carried it closer, and their defenders backed off. Now shoot! Where do you aim?', 3)] },
+    'saved', 'passBack',
+  ] }],
+  'looseShoot:ST': [P_LOOSE, { right: { end: 'goal' } }],
+  'loosePass:ST': [P_LOOSE, { right: { play: [P_TAP], end: '{LW} scores at the back post! ⚽' } }],
+  'loosePass:LW': [{ right: { play: [{ ms: 400, ball: [22.9, 54.3] }, toYou(700)], next: [{
+    type: 'choose', rule: 'tapin', q: '{ST} passes it to you at the back post. The goal is wide open. What do you do?',
+    opts: [
+      ['Tap it in first time', 2, "It's rolling slowly and the goal is open. Tap it in!"],
+      ['Stop it first, then shoot', 1, 'Stopping it gives their keeper time to get across. A slow ball right in front of an open goal can go in first time.'],
+      ['Blast it as hard as you can', 0, "You're right in front of an open goal. A big swing can send it over. Just tap it in."],
+    ],
+    pov: { opts: [{ play: [P_TAP], end: 'goal' }, 'tooSlow', 'over'] },
+  }] } }],
+  'looseWingPass:RW': [P_LOOSE, { right: { play: [P_TAP], end: '{ST} scores! ⚽' } }],
+  'looseWingShoot:RW': [P_LOOSE, { right: { end: 'goal' } }],
+  'looseEdgePass:CM': [P_LOOSE, { right: { play: [P_TOUCH, P_SHOT], end: '{LW} scores! ⚽' } }],
+};
+// The mirrored scenes (ball on the left) need their plays mirrored too.
+const swapLR = s => s && s.replace(/\{(LW|RW)\}/g, (m, r) => `{${SWAP[r]}}`);
+const mxp = p => [W - p[0], ...p.slice(1)];
+const mirrorBeat = bt => Object.fromEntries(Object.entries(bt).map(([k, v]) => [SWAP[k] || k, Array.isArray(v) ? mxp(v) : v]));
+function mirrorPlay(s) {
+  if (!s || typeof s !== 'object') return s;
+  const o = { ...s };
+  if (s.play) o.play = s.play.map(mirrorBeat);
+  if (s.to) o.to = SWAP[s.to] || s.to;
+  if (s.at) o.at = mxp(s.at);
+  if (s.end) o.end = swapLR(s.end);
+  if (s.right) o.right = mirrorPlay(s.right);
+  if (s.opts) o.opts = s.opts.map(mirrorPlay);
+  if (s.next) {
+    o.next = s.next.map(st => ({
+      ...st, q: swapLR(st.q), kx: st.kx == null ? st.kx : 6 - st.kx, pov: mirrorPlay(st.pov),
+      opts: st.opts && st.opts.map(([t, g, w]) => [swapLR(t), g, swapLR(w)]),
+    }));
+  }
+  return o;
+}
+// This question's steps, with what to play after each one (POV only: the game's own ask is untouched).
+function povAsk(B) {
+  const role = B.sc.mirrored ? SWAP[B.role] || B.role : B.role;
+  const plays = (POV_PLAYS[B.sc.id.replace('~', '') + ':' + role] || []).map(s => (B.sc.mirrored ? mirrorPlay(s) : s));
+  return Object.assign({}, B.ask, { steps: B.ask.steps.map((st, i) => Object.assign({}, st, { pov: plays[i] || {} })) });
+}
+// Turn the words in a beat ('you', 'touch', 'goal', 'mark', 'ball') into spots, from where everyone is now.
+function povResolve(bt, pos, role) {
+  const out = Object.assign({}, bt), ball = pos.ball, goal = [20, 60], you = pos[role];
+  const step = (a, b, d) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [a[0] + (b[0] - a[0]) / L * d, a[1] + (b[1] - a[1]) / L * d]; };
+  if (out.ball === 'you') out.ball = step(you, ball, 0.55);
+  else if (out.ball === 'touch') {
+    out.ball = step(ball, goal, 1.1);
+    const holder = ROLES.filter(r => pos[r]).sort((a, b) => Math.hypot(pos[a][0] - ball[0], pos[a][1] - ball[1]) - Math.hypot(pos[b][0] - ball[0], pos[b][1] - ball[1]))[0];
+    if (holder && !(holder in out)) out[holder] = step(pos[holder], goal, 0.8);
+  } else if (out.ball === 'goal') {
+    out.ball = [ball[0] >= 20 ? 18.3 : 21.7, 60.7, 0.25];
+    if (pos.K && !('K' in out)) out.K = [pos.K[0] + (out.ball[0] - pos.K[0]) * 0.35, pos.K[1]];
+  }
+  for (const k in out) {
+    if (out[k] === 'mark') out[k] = step(you, goal, 0.9);
+    else if (out[k] === 'ball' && k !== 'ball') out[k] = step(ball, goal, -0.5);
+  }
+  delete out.air;
+  return bt.air ? Object.assign(out, { air: bt.air }) : out;
+}
+// Play beats for real: the game's own positions move too, so the next step is scored from there.
+async function povPlayOn(B, beats) {
+  const rec = B.povBeats[B.si] || (B.povBeats[B.si] = []);
+  for (const bt of beats || []) {
+    const r = povResolve(bt, Object.assign({}, B.pos), B.role);
+    rec.push(r);
+    await playBeats(B, [r]);
+  }
+}
+// What goes wrong after a wrong answer: [kind, options] for POV.outcome.
+function povWrong(B, st, r) {
+  const spec = st.pov || {};
+  if (r.type === 'choose') {
+    const o = (spec.opts || [])[r.oi];
+    if (typeof o === 'string') return [o];
+    if (o && o.kind) return [o.kind, { to: o.to ? B.pos[o.to] : o.at }];
+    return ['tooSlow'];
+  }
+  if (r.type === 'place') return [/offside/i.test(r.said) ? 'offside' : spec.miss || 'cutOut', { air: /^corner/.test(B.sc.id) ? 1 : 0 }];
+  if (r.type === 'aim') {
+    if (r.hit === 'goal') return ['saveCatch'];
+    if (r.blocked) return ['deflect'];
+    if (r.hit && r.hit !== 'at') return [r.g === 1 ? 'safeArrive' : 'closedDown'];
+    return [r.out ? 'out' : 'nobody'];
+  }
+  return ['none']; // a shot: POV.shoot already showed what happened
+}
+// After each step in POV mode: play on if it was right, or show what goes wrong and stop.
+async function povAfterStep(B, r) {
+  const st = B.ask.steps[B.si], spec = st.pov || {};
+  state.step = 'watch';
+  watching();
+  $('#replayBtn').hidden = true;
+  $('#qtext').textContent = 'Watch…';
+  const ok = r.type === 'place' ? r.g >= 1 : r.g === 2; // nearly the right spot is close enough to carry on
+  if (!ok) {
+    await POV.outcome(...povWrong(B, st, r));
+    if (Q.bx !== B) return;
+    B.povSteps = B.ask.steps.slice(); // what was still to come, for Show me
+    B.ask.steps.length = B.results.length; // the question stops here
+    return boxReveal(B);
+  }
+  const right = (r.type === 'choose' ? (spec.opts || [])[r.oi] : spec.right) || {};
+  await povPlayOn(B, right.play);
+  if (Q.bx !== B) return;
+  if (right.stop) B.ask.steps.length = B.si + 1;
+  else if (right.next) B.ask.steps.splice(B.si + 1, 0, ...right.next);
+  B.si++;
+  if (B.si >= B.ask.steps.length) {
+    if (right.end) await POV.cheer(right.end === 'goal' ? 'GOAL! ⚽🎉' : fillRoles(right.end, B.role));
+    if (Q.bx !== B) return;
+    B.povAllRight = B.results.every(x => (x.type === 'place' ? x.g >= 1 : x.g === 2));
+    return boxReveal(B);
+  }
+  const nst = B.ask.steps[B.si];
+  if (nst.play) { await playBeats(B, nst.play); drawTrails(B); }
+  enterStep(B);
+}
+/* Show me, in POV: from the decision you got wrong, play every right decision
+   through to the end result (the better choice, the pass to you, your shot…). */
+async function povShowMe(B, r) {
+  const si = B.results.length - 1, steps = (B.povSteps || B.ask.steps).slice();
+  const play = async beats => { for (const bt of beats || []) await POV.beats([povResolve(bt, POV.positions(), B.role)]); };
+  let end = null;
+  for (let i = si; i < steps.length; i++) {
+    const st = steps[i], spec = st.pov || {};
+    if (i > si && st.play) await POV.beats(st.play);
+    let right = {};
+    if (st.type === 'choose') {
+      // a right answer that shows something happening, if there is one
+      const rights = st.opts.map((o, j) => (o[1] === 2 ? (spec.opts || [])[j] || {} : null)).filter(Boolean);
+      right = rights.find(x => x.play && x.play.length) || rights[0] || {};
+    } else if (st.type === 'place') {
+      if (i === si) { const z = nearestZone(r); await POV.showRun([z.x, z.y]); } else await POV.runTo([st.zones[0][0], st.zones[0][1]]);
+      right = spec.right || {};
+    } else if (st.type === 'aim') {
+      const best = st.targets.reduce((a, t) => (t.g > a.g ? t : a)), pos = POV.positions();
+      if (i === si) POV.set('ball', r.from);
+      await POV.beats([{ ms: 600, ball: best.to ? pos[best.to] : best.goal ? [19.4, 60.6] : best.at, air: B.ask.lofted ? 1 : 0 }]);
+      right = spec.right || {};
+      if (best.goal) end = end || 'goal';
+    } else if (st.type === 'shot') {
+      const z = shotZones(st.kx, st.big ? 1.3 : 1).sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0];
+      if (i > si) POV.set('K', [17 + st.kx, st.big ? 57.6 : 59.3]);
+      if (z) await POV.shoot({ x: (z[0] + z[1]) / 2, y: 0.35 }, 2); // a great shot goes in, and says so
+      return;
+    }
+    await play(right.play);
+    if (right.end) end = right.end;
+    if (right.stop) break;
+    if (right.next) steps.splice(i + 1, 0, ...right.next);
+  }
+  await POV.cheer(!end || end === 'goal' ? 'GOAL! ⚽🎉' : fillRoles(end, B.role));
 }
 
 /* ---------------- quiz ---------------- */
@@ -3530,7 +3790,7 @@ function renderBox(q) {
   B.trailG = el('g', null, Q.P.layers.arrows);
   makeActors(B);
   drawActors(B);
-  if (povPrep()) povBox(B);
+  if (povPrep()) { B.ask = povAsk(B); B.povBeats = {}; povBox(B); }
 
   const poss = $('#poss');
   poss.className = 'poss we';
@@ -3568,7 +3828,7 @@ function boxStep(B) {
   $('#qtext').textContent = text;
   const first = B.si === 0;
   if (st.type === 'choose') {
-    B.opts = shuffle(st.opts.map(([t, g, why, to]) => ({ text: fillRoles(t, B.role), g, why: fillRoles(why, B.role), to })));
+    B.opts = shuffle(st.opts.map(([t, g, why, to], oi) => ({ text: fillRoles(t, B.role), g, why: fillRoles(why, B.role), to, oi })));
     const box = $('#options');
     box.textContent = '';
     B.opts.forEach((o, i) => {
@@ -3706,7 +3966,7 @@ function boxChoose(i) {
   // When more than one answer is right, the one you picked leads and the others are mentioned too.
   const rights = B.opts.filter(x => x.g === 2), best = o.g === 2 ? o : rights.find(x => x.to) || rights[0];
   const alts = rights.filter(x => x !== best).map(x => ({ text: x.text, why: x.why }));
-  finishStep(B, { type: 'choose', g: o.g, pts: gradePts(o.g, max), max, said: o.g === 2 ? '' : o.why, best: best.text, why: best.why, show: best.to, alts });
+  finishStep(B, { type: 'choose', g: o.g, pts: gradePts(o.g, max), max, said: o.g === 2 ? '' : o.why, best: best.text, why: best.why, show: best.to, alts, oi: o.oi });
 }
 function boxConfirm() {
   const B = Q.bx;
@@ -3719,10 +3979,20 @@ function boxConfirm() {
   // POV mode: you run to your spot, or take your shot, before the answer comes up.
   const v = pov();
   if (v) POV.ask(null);
-  if (st.type === 'place') { const r = scorePlace(B, st, p, max); return v ? POV.runTo([p.x, p.y]).then(() => finishStep(B, r)) : finishStep(B, r); }
-  if (st.type === 'shot') { const r = scoreShot(B, st, p, max); return v ? POV.shoot(p).then(() => finishStep(B, r)) : finishStep(B, r); }
+  if (st.type === 'place') {
+    const r = scorePlace(B, st, p, max);
+    if (!v) return finishStep(B, r);
+    return POV.runTo([p.x, p.y]).then(() => {
+      // you're where you ran to now (and Watch it again puts you back there)
+      B.pos[B.role] = [p.x, p.y];
+      (B.povBeats[B.si] = B.povBeats[B.si] || []).push({ ms: 500, [B.role]: [p.x, p.y] });
+      finishStep(B, r);
+    });
+  }
+  if (st.type === 'shot') { const r = scoreShot(B, st, p, max); return v ? POV.shoot(p, r.g).then(() => finishStep(B, r)) : finishStep(B, r); }
   const r = scoreAim(B, st, p, max);
   if (B.aimLine) { B.aimLine.remove(); B.aimLine = null; }
+  if (v && r.hit === 'goal' && r.g < 2 && B.pos.K) r.end = [B.pos.K[0], B.pos.K[1] - 0.3]; // POV: a shot that's the wrong choice gets saved
   playBeats(B, [{ ms: 550, ball: r.end, air: B.ask.lofted ? 1 : 0 }]).then(() => { drawTrails(B); finishStep(B, r); });
 }
 function scorePlace(B, st, p, max) {
@@ -3762,17 +4032,19 @@ function scoreAim(B, st, p, max) {
   const inGoal = p.x >= 16.6 && p.x <= 23.4 && p.y >= 59.2;
   if (!hit && inGoal) hit = ts.find(t => t.goal) || null;
   const bestT = ts.reduce((a, t) => (t.g > a.g ? t : a));
-  let g = 0, said, end = [p.x, p.y];
+  let g = 0, said, end = [p.x, p.y], blocked = false, out = false;
   if (hit) { g = hit.g; said = g === 2 ? '' : fillRoles(hit.why, B.role); }
   else {
     const block = !B.ask.lofted && blocker(B, from, end);
-    const out = p.x < 0 || p.x > W || p.y > L;
+    out = p.x < 0 || p.x > W || p.y > L;
     if (inGoal) said = "That's a shot, but a pass was the better choice here.";
-    else if (block) { said = "One of their players is in the way, so they'd cut that pass out."; end = block; }
+    else if (block) { said = "One of their players is in the way, so they'd cut that pass out."; end = block; blocked = true; }
     else if (out) said = 'That ball would go out of play.';
     else said = "There's nobody there to get it.";
   }
-  return { type: 'aim', g, pts: gradePts(g, max), max, said, best: fillRoles(bestT.text, B.role), why: fillRoles(bestT.why, B.role), end, from, bestC: bestT.c, pos: p };
+  // hit: what the ball went to ('goal', a teammate, or 'at' a space), for POV mode to play out
+  const what = hit ? (hit.goal ? 'goal' : hit.to || 'at') : inGoal ? 'goal' : null;
+  return { type: 'aim', g, pts: gradePts(g, max), max, said, best: fillRoles(bestT.text, B.role), why: fillRoles(bestT.why, B.role), end, from, bestC: bestT.c, pos: p, hit: what, blocked, out };
 }
 function shotZones(kx, reach) {
   const z = [];
@@ -3798,6 +4070,7 @@ function finishStep(B, r) {
   B.results.push(r);
   if (B.hint) { B.hint.remove(); B.hint = null; }
   B.drag = null;
+  if (pov()) return povAfterStep(B, r); // POV mode plays it out: see povAfterStep
   B.si++;
   if (B.si >= B.ask.steps.length) return boxReveal(B);
   const st = B.ask.steps[B.si];
@@ -3845,6 +4118,8 @@ function replayBox() {
   if (pov()) povBox(B);
   let p = playLead(B);
   for (let i = 1; i <= B.si; i++) {
+    const extra = B.povBeats && B.povBeats[i - 1]; // POV: what played out after the step before (your run, a pass to you)
+    if (extra && extra.length) p = p.then(() => playBeats(B, extra));
     const play = B.ask.steps[i].play;
     if (play) p = p.then(() => playBeats(B, play)).then(() => drawTrails(B));
   }
@@ -3863,7 +4138,10 @@ function boxReveal(B) {
   const q = B.q;
   state.step = 'done';
   $('#replayBtn').hidden = true;
-  const total = B.results.reduce((a, r) => a + r.pts, 0);
+  // POV can ask extra steps, or fewer (a right answer that ends the play early). A question
+  // is still worth 5 stars: every decision right gets them all, otherwise they're shared out.
+  const raw = B.results.reduce((a, r) => a + r.pts, 0), most = B.results.reduce((a, r) => a + r.max, 0);
+  const total = B.results.every(r => r.g === 2) ? Q_MAX : most > Q_MAX ? Math.round(Q_MAX * raw / most) : raw;
   q.stars = total;
   state.stars += total;
   for (const r of B.results) {
@@ -3877,7 +4155,8 @@ function boxReveal(B) {
     }
   }
   const last = B.results[B.results.length - 1];
-  $('#showMeBtn').hidden = !(last.g < 2 && (last.type === 'place' || last.type === 'aim' || last.show));
+  // POV's Show me plays any better choice through to the end, so it's there for every mistake.
+  $('#showMeBtn').hidden = !(last.g < 2 && (pov() || last.type === 'place' || last.type === 'aim' || last.show));
   $('#teamBtn').hidden = true;
   showAnswer(boxFeedback(B), total, B.results.map(r => `${STEP_INFO[r.type].ico} ${STEP_INFO[r.type].chip} ${GRADE_MARK[r.g]}`));
   if (pov()) povRevealBox(B);
@@ -3888,7 +4167,7 @@ const nearestZone = r => r.zones.reduce((a, z) => (distToZone(r.pos, z) < distTo
      some right → yes to what was right, then what was better and why
      all wrong  → a short lesson: what to do, why, and the thing to remember */
 function boxFeedback(B) {
-  const rs = B.results, miss = B.ask.steps.find((st, i) => rs[i].g < 2);
+  const rs = B.results, miss = B.ask.steps.find((st, i) => rs[i] && rs[i].g < 2);
   const rule = RULES[(miss && (miss.rule || (miss.type === 'shot' && 'low'))) || B.ask.rule];
   const alsoRight = r => (r.alts || []).map(a => ` Another right answer: ${lcFirst(sentence(a.text))}`).join('');
   if (rs.every(r => r.g === 2)) {
@@ -3915,6 +4194,7 @@ function showMeBox() {
   const B = Q.bx, r = B && B.results[B.results.length - 1];
   if (!r) return;
   $('#showMeBtn').hidden = true;
+  if (pov()) return povShowMe(B, r);
   if (r.type === 'place') {
     const z = nearestZone(r);
     if (Q.arrow) { Q.arrow.remove(); Q.arrow = null; }

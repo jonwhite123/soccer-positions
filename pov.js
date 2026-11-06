@@ -788,15 +788,18 @@ function runTo(to, faceAt) {
     S.busy = false; setLookButtons();
   })();
 }
-// A shot at their goal. gp: where in the goal ({ x across from the left post, y height }).
-function shoot(gp) {
+/* A shot at their goal. gp: where in the goal ({ x across from the left post, y height }).
+   g: how good the shot was (the game's grade). Only a great shot goes in; one that's
+   on target but not great gets saved, and one right on the post hits it. */
+function shoot(gp, g) {
   if (!S.on) return Promise.resolve();
   return (async () => {
     if (S.introP) await S.introP;
-    S.busy = true; S.mark = null;
+    S.busy = true; S.mark = null; setLookButtons();
     const info = S.shotInfo || { kx: 3, big: false }, reach = info.big ? 1.3 : 1;
     const gx = gp.x, gy = Math.max(0.12, gp.y), keeper = Object.keys(S.pos).find(keeperOf);
-    const saved = gx >= 0 && gx <= 6 && gy <= 2 && Math.abs(gx - info.kx) < reach && gy < 1.7;
+    const inGoal = gx >= 0 && gx <= 6 && gy <= 2, post = inGoal && (gx < 0.15 || gx > 5.85);
+    const saved = inGoal && !post && (g == null ? Math.abs(gx - info.kx) < reach && gy < 1.7 : g < 2);
     const into = [17 + gx, 60.3, gy];
     kick(onBall());
     await wait(150);
@@ -805,16 +808,145 @@ function shoot(gp) {
       const k = S.pos[keeper];
       await Promise.all([moveTo({ ball: [17 + gx, k[1] + 0.1, gy] }, ms), moveTo({ [keeper]: [17 + gx, k[1]] }, ms * 0.8)]);
       await moveTo({ ball: [17 + gx + 1.5, k[1] - 2, 0] }, 450);
-      banner('Saved!', 1400);
+      banner('Saved!', 1600);
+    } else if (post) {
+      await moveTo({ ball: [17 + (gx < 3 ? 0 : 6), 60, gy] }, ms);
+      await moveTo({ ball: [17 + (gx < 3 ? -2 : 8), 56, 0] }, 450, { air: 0.5 });
+      banner('Off the post!', 1600);
     } else {
       await moveTo({ ball: into }, ms);
-      const inGoal = gx >= 0 && gx <= 6 && gy <= 2;
       await moveTo({ ball: inGoal ? [17 + gx, 61.2, Math.min(gy, 1.1)] : [17 + gx + (gx < 0 ? -1.5 : gx > 6 ? 1.5 : 0), 63, gy + 0.3] }, inGoal ? 220 : 400);
-      banner(inGoal ? 'GOAL! ⚽' : gy > 2 ? 'Over the bar!' : 'Wide!', 1400);
+      banner(inGoal ? 'GOAL! ⚽🎉' : gy > 2 ? 'Over the bar!' : 'Wide!', 1600);
     }
-    await wait(600);
+    await wait(800);
     S.busy = false;
   })();
+}
+
+/* What happens after a wrong choice, played out so you can see it (the question
+   then stops). The ball and players are wherever the moment left them.
+     o.to   a spot that matters (the teammate you passed to, or where the ball goes) */
+const OUTCOME_TEXT = {
+  saved: 'Saved!', saveCatch: 'Saved!', blocked: 'Blocked!', over: 'Over the bar!', crossBlocked: 'Blocked!',
+  tackled: 'Tackled!', tooSlow: 'Too slow! They closed you down.', keeperSlow: 'Too slow! Their keeper got there.',
+  cleared: 'Wasted. Their ball now.', letGo: 'It got away…', safe: 'Safe… but there was a better chance.',
+  safeArrive: 'Safe… but there was a better chance.', passBack: 'The chance has gone…', cutOut: 'Cut out!',
+  deflect: 'Cut out!', offside: '🚩 Offside!', noFollow: 'Nobody followed in…', keeper: 'Their keeper got it.',
+  nobody: 'Their ball…', closedDown: 'Their defender won it.', out: 'Out of play!',
+};
+function outcome(kind, o = {}) {
+  if (!S.on || !kind || kind === 'none') return Promise.resolve();
+  return (async () => {
+    if (S.introP) await S.introP;
+    S.busy = true; S.mark = null; S.look = 'ball'; S.lookCap = 30; setLookButtons();
+    const keeper = Object.keys(S.pos).find(keeperOf), k = keeper && S.pos[keeper];
+    const whites = Object.keys(S.pos).filter(id => !BLUE.has(id) && !keeperOf(id));
+    const nearestWhite = pt => whites.slice().sort((a, b) => dist(S.pos[a], pt) - dist(S.pos[b], pt))[0];
+    const b = () => S.ball.slice(0, 2), me = S.pos[S.you];
+    const toward = (a, c, d) => { const L = dist(a, c) || 1; return [a[0] + (c[0] - a[0]) / L * d, a[1] + (c[1] - a[1]) / L * d]; };
+    // The first of their players in the way of the ball from a to c, and where they'd meet it.
+    const inTheWay = (a, c, reach) => {
+      const L = dist(a, c) || 1, ux = (c[0] - a[0]) / L, uy = (c[1] - a[1]) / L;
+      let best = null;
+      for (const id of whites) {
+        const q = S.pos[id], along = (q[0] - a[0]) * ux + (q[1] - a[1]) * uy, off = Math.abs((q[0] - a[0]) * uy - (q[1] - a[1]) * ux);
+        if (along > 0.8 && along < L + 0.5 && off < reach && (!best || along < best.along)) best = { id, along, pt: [a[0] + ux * along, a[1] + uy * along] };
+      }
+      return best;
+    };
+    const winIt = async id => { // their player gets to the ball and takes it away
+      if (!id) return;
+      await moveTo({ [id]: toward(S.pos[id], b(), Math.max(0, dist(S.pos[id], b()) - 0.4)) }, clamp(dist(S.pos[id], b()) / 6, 0.35, 1.2) * 1000);
+      const away = [b()[0] + (b()[0] < 20 ? -1 : 1) * 1.5, b()[1] - 3];
+      await moveTo({ [id]: toward(S.pos[id], away, 2.6), ball: away }, 600);
+    };
+    const kickTo = async (to, ms, air) => { kick(onBall()); await wait(140); await moveTo({ ball: to }, ms, { air }); };
+    let text = OUTCOME_TEXT[kind];
+    switch (kind) {
+      case 'saved': await Promise.all([kickTo(k ? [k[0], k[1] - 0.3, 0.9] : [20, 60.2], 560)]); break;
+      case 'saveCatch': case 'safeArrive': case 'out': await wait(300); break;
+      case 'blocked': {
+        const hit = inTheWay(b(), [20, 60], 2.2);
+        if (hit) { await kickTo(hit.pt, 300); await moveTo({ ball: [hit.pt[0] + (hit.pt[0] < 20 ? -3 : 3), hit.pt[1] - 3] }, 500, { air: 0.6 }); }
+        else { await kickTo(k ? [k[0], k[1] - 0.3, 0.9] : [20, 60.2], 560); text = 'Saved!'; }
+        break;
+      }
+      case 'over': {
+        const x = 20 + (b()[0] > 20 ? 1.2 : -1.2);
+        await kickTo([x, 60.4, 3.4], 620); await moveTo({ ball: [x, 64, 4.4] }, 380);
+        break;
+      }
+      case 'crossBlocked': {
+        const to = [21, 56], hit = inTheWay(b(), to, 3) || { id: nearestWhite(to), pt: to };
+        await Promise.all([kickTo(hit.pt, 420), moveTo({ [hit.id]: toward(S.pos[hit.id], hit.pt, Math.max(0, dist(S.pos[hit.id], hit.pt) - 0.4)) }, 420)]);
+        await moveTo({ ball: [hit.pt[0], 62.5] }, 500, { air: 0.6 });
+        break;
+      }
+      case 'tackled': await winIt(nearestWhite(b())); break;
+      case 'tooSlow': {
+        if (k && dist(k, b()) < 5) { text = OUTCOME_TEXT.keeperSlow; await moveTo({ [keeper]: toward(k, b(), dist(k, b()) - 0.3) }, 500); }
+        else await winIt(nearestWhite(b()));
+        break;
+      }
+      case 'cleared': {
+        const to = [b()[0] < 20 ? 7 : 33, Math.max(28, b()[1] - 16)];
+        await kickTo(to, 900, 1); await winIt(nearestWhite(to));
+        break;
+      }
+      case 'letGo': {
+        const to = [b()[0] + (b()[0] < 20 ? 5 : -5), b()[1] + 1];
+        await moveTo({ ball: to }, 900); await winIt(nearestWhite(to));
+        break;
+      }
+      case 'safe': if (o.to) await kickTo(toward(o.to, b(), 0.5), 800); break;
+      case 'passBack': await kickTo([b()[0] < 20 ? 13 : 27, Math.max(20, b()[1] - 22)], 1100); break;
+      case 'cutOut': { // the pass to you gets cut out, because you're not in a good spot
+        const from = b(), hit = inTheWay(from, me, 2.6) || { id: nearestWhite(me), pt: toward(me, from, 0.9) };
+        await Promise.all([kickTo(hit.pt, clamp(dist(from, hit.pt) / 12, 0.4, 1.2) * 1000, o.air), moveTo({ [hit.id]: toward(S.pos[hit.id], hit.pt, Math.max(0, dist(S.pos[hit.id], hit.pt) - 0.4)) }, 600)]);
+        await winIt(hit.id);
+        break;
+      }
+      case 'offside': {
+        const ahead = [me[0], Math.min(57, me[1] + 4.5)];
+        await Promise.all([kickTo(ahead, 1000), (async () => { await wait(300); await moveTo({ [S.you]: [me[0], Math.min(56, me[1] + 3.4)] }, 900); })()]);
+        break;
+      }
+      case 'noFollow': { // a teammate shoots, their keeper pushes it out, and nobody's there
+        const at = k ? [k[0] + 0.5, k[1] - 3.2] : [20.5, 56.5];
+        await kickTo(k ? [k[0], k[1] - 0.2, 0.6] : [20, 59.5], 560);
+        await moveTo({ ball: at }, 420);
+        const id = nearestWhite(at);
+        await moveTo({ [id]: toward(S.pos[id], at, Math.max(0, dist(S.pos[id], at) - 0.4)) }, 600);
+        await kickTo([at[0] < 20 ? 6 : 34, at[1] - 16], 900, 1);
+        break;
+      }
+      case 'keeper': if (k) await kickTo([k[0], k[1] - 0.3, 0.8], 800, 0.6); break;
+      case 'nobody': { if (o.to) await kickTo(o.to, 800); await winIt(nearestWhite(b())); break; }
+      case 'closedDown': case 'deflect': await winIt(nearestWhite(b())); break;
+    }
+    banner(text || '', 1800);
+    await wait(1500);
+    S.busy = false; S.look = null; setLookButtons();
+  })();
+}
+// A big moment: say so, and give it a second to sink in.
+function cheer(text) {
+  if (!S.on) return Promise.resolve();
+  banner(text, 1900);
+  return wait(1500);
+}
+// Where everyone is now (to work out the next beat), and a snapshot to come back to.
+function positions() { const p = {}; for (const id in S.pos) p[id] = S.pos[id].slice(); p.ball = S.ball.slice(); return p; }
+function snap() { return { pos: positions(), face: { ...S.face } }; }
+function restore(sn, youAt) {
+  if (!S.on || !sn) return;
+  S.pos = {};
+  for (const id in sn.pos) if (id !== 'ball') S.pos[id] = sn.pos[id].slice();
+  S.ball = sn.pos.ball.slice();
+  if (youAt) S.pos[S.you] = youAt.slice();
+  S.face = { ...sn.face }; S.kick = {}; S.spd = {};
+  S.prev = {}; for (const id in S.pos) S.prev[id] = S.pos[id].slice();
+  S.prevBall = S.ball.slice(0, 2);
 }
 // "Look up!": lift your head from the ball and look toward `at` (their goal by default).
 function lookUp(at) {
@@ -1044,7 +1176,8 @@ function injectCSS() {
 }
 
 window.POV = {
-  mount, start, stop, beats, moveAll, set, ask, runTo, shoot, lookUp, lockLook, reveal, showRun, team, setMap, banner, hint,
+  mount, start, stop, beats, moveAll, set, ask, runTo, shoot, outcome, cheer, positions, snap, restore,
+  lookUp, lockLook, reveal, showRun, team, setMap, banner, hint,
   get on() { return S.on; },
   // for tests: the state, the camera, and where a point on the pitch shows on screen
   _S: S, _cam: cam, _proj: (x, y, z = 0) => { setBasis(); return proj(x, y, z); },
