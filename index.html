@@ -424,6 +424,29 @@ svg text { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .zone, .you-pulse { animation: none; }
 }
+
+/* POV mode: the view through your own eyes (drawn by pov.js) takes the pitch's
+   place. The pitch map is still underneath, and comes back with 🗺️ Map. */
+.quiz.pov .pitch-box { position: relative; }
+.quiz.pov .pitch-box:not(.pov-map) {
+  /* all the space left of the questions, as tall as the screen, but never taller than it is wide */
+  width: max(12rem, min(calc(100vw - var(--cw) - 4rem), calc((100vh - 5.5rem) * 1.9)));
+  width: max(12rem, min(calc(100cqw - var(--cw) - 1.25rem), calc((100dvh - 5.5rem) * 1.9)));
+  height: max(14rem, min(calc(100vh - 5.5rem), calc((100vw - var(--cw) - 4rem) * 0.9)));
+  height: max(14rem, min(calc(100dvh - 5.5rem), calc((100cqw - var(--cw) - 1.25rem) * 0.9)));
+}
+.quiz.pov .pitch-box:not(.pov-map) #pitch { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; }
+.quiz.pov .legend { display: none; }
+.quiz.pov .pitch-box.pov-map + .legend { display: flex; }
+@media (orientation: portrait), (max-width: 600px) {
+  .quiz.pov { grid-template-areas: "pitch" "legend" "q" "fb"; }
+  .quiz.pov .pitch-box:not(.pov-map) { width: 100%; height: auto; aspect-ratio: 4 / 3.3; }
+  .quiz.pov .fbcard.pre, .quiz.pov .fbcard.act { position: static; padding: 0.75rem; }
+  .quiz.pov .options { gap: 0.4375rem; }
+  .quiz.pov .opt { font-size: 1rem; padding: 0.5rem 0.625rem; gap: 0.5rem; }
+  .quiz.pov .opt .letter { width: 1.75rem; height: 1.75rem; }
+  .quiz.pov .qtext { font-size: 1.25rem; }
+}
 </style>
 <!-- Visitor counts: GoatCounter (no cookies). Dashboard: https://soccer-positions.goatcounter.com -->
 <script data-goatcounter="https://soccer-positions.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
@@ -458,6 +481,7 @@ svg text { font-family: inherit; }
         </div>
         <p class="note" id="boxNote" hidden>🎯 Shooting &amp; crossing is for the Center Mid, the wings and the Striker.</p>
         <label class="switch"><input type="checkbox" id="hardInput"><span class="track"></span><span>Hard mode (hide teammates)</span></label>
+        <label class="switch" id="povSwitch"><input type="checkbox" id="povInput"><span class="track"></span><span>👀 POV mode (see it through your eyes)</span></label>
         <button class="btn primary big wide" id="startBtn" type="button">Play ⚽</button>
         <button class="btn ghost small wide" id="coachBtn" type="button">👀 Coach view</button>
       </div>
@@ -549,6 +573,8 @@ svg text { font-family: inherit; }
 <div id="confetti" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<!-- POV mode's 3D view. Plain JavaScript, no libraries, so it works on GitHub Pages. -->
+<script src="pov.js"></script>
 <script>
 (() => {
 'use strict';
@@ -2766,6 +2792,7 @@ const state = {
   name: store.get('name', ''),
   phases: store.get('phases', ['gk', 'open', 'trans']),
   hard: store.get('hard', false),
+  pov: store.get('pov', false), // POV mode: off unless the player switches it on
   round: [], i: 0, stars: 0, step: 'place', moved: false,
   coach: false, ci: 0,
 };
@@ -2773,6 +2800,7 @@ if (!ROLES.includes(state.role)) state.role = 'RD';
 if (!Array.isArray(state.phases) || !state.phases.length) state.phases = ['gk', 'open', 'trans'];
 
 function show(screen) {
+  if (screen !== 'quiz') povOff();
   for (const id of ['setup', 'quiz', 'results']) $('#' + id).hidden = id !== screen;
   $('#homeBtn').hidden = screen === 'setup';
   document.body.dataset.screen = screen;
@@ -2817,6 +2845,10 @@ function initSetup() {
   const hard = $('#hardInput');
   hard.checked = !!state.hard;
   hard.addEventListener('change', () => { state.hard = hard.checked; store.set('hard', state.hard); });
+  const povIn = $('#povInput');
+  $('#povSwitch').hidden = !window.POV; // pov.js didn't load: no POV option
+  povIn.checked = !!state.pov;
+  povIn.addEventListener('change', () => { state.pov = povIn.checked; store.set('pov', state.pov); });
   $('#startBtn').addEventListener('click', startRound);
   $('#coachBtn').addEventListener('click', startCoach);
   $('#voiceBtn').addEventListener('click', () => {
@@ -2847,6 +2879,80 @@ function selectRole(r) {
 }
 function renderBoxNote() {
   $('#boxNote').hidden = !(state.phases.includes('box') && !BOX_ROLES.includes(state.role));
+}
+
+/* ---------------- POV mode ----------------
+   With 👀 POV mode on, pov.js draws each question from your own eyes, in
+   3D, where the pitch would be. Everything else is unchanged: the same
+   questions, scoring and answer box. The pitch map is still drawn
+   underneath (it's what 🗺️ Map shows after you answer), and taps in the
+   3D view go through the same moveYou / moveDragTo as dragging does. */
+const pov = () => !!(state.pov && !state.coach && window.POV);
+function povPrep() {
+  const on = pov();
+  $('#quiz').classList.toggle('pov', on);
+  if (on) POV.mount($('.pitch-box'));
+  else povOff();
+  return on;
+}
+function povOff() {
+  $('#quiz').classList.remove('pov');
+  if (window.POV) POV.stop();
+}
+// Questions that say "drag the ball" mean "tap" in POV mode.
+const povText = t => (pov() ? t.replace(/Drag the ball to where/g, 'Tap where').replace(/Drag the ball into the goal\./g, 'Tap where in the goal you would aim.') : t);
+// Where you're standing at the start of a positioning question: your usual
+// spot (the bench makes no sense from your own eyes), stepped clear of anyone there.
+function povStart(role, taken) {
+  const p = { ...KICKOFF[role] };
+  for (let i = 0; i < 6 && Object.values(taken).some(q => Math.hypot(q[0] - p.x, q[1] - p.y) < 1.6); i++) p.y -= 1.2;
+  return p;
+}
+function povRegular(q, pos) {
+  const sit = q.sit, all = {};
+  for (const r of ROLES) {
+    all['w' + r] = [pos.white[r].x, pos.white[r].y];
+    if (r !== q.role) all[r] = [pos.blue[r].x, pos.blue[r].y];
+  }
+  const s = q.trans ? pos.blue[q.role] : povStart(q.role, all);
+  all[q.role] = [s.x, s.y];
+  const hidden = state.hard ? ROLES.filter(r => r !== q.role && !holdsBall(sit, r) && !(sit.phase === 'lost' && sit.carrier === r)) : [];
+  POV.start({ pos: all, ball: [q.frame.ball.x, q.frame.ball.y], you: q.role, hidden, restrict: sit.phase === 'ourGK' || sit.phase === 'theirGK' ? sit.phase : null });
+  POV.ask('place', p => { moveYou(p); return Q.youPos; });
+}
+function povBox(B) {
+  const pos = {};
+  for (const id in B.sc.at) if (id !== 'ball') pos[id] = B.sc.at[id];
+  POV.start({ pos, ball: B.sc.at.ball, you: B.role, fill: true });
+}
+// What a tap means at each step of an attacking scene.
+function povStep(B, st) {
+  // A loose ball you haven't controlled yet: eyes on the ball, no looking around.
+  POV.lockLook(st.type === 'choose' && B.si === 0 && (B.ask.tags || []).includes('loose'));
+  if (st.type === 'choose') return POV.ask(null);
+  POV.ask(st.type, p => { moveDragTo(B, p); return B.drag && B.drag.pos; }, st.type === 'shot' ? { kx: st.kx, big: !!st.big } : null);
+}
+function povRevealBox(B) {
+  const zones = [], arrows = [], goalZones = [], key = [];
+  let look = null;
+  for (const r of B.results) {
+    if (r.type === 'place') zones.push(...r.zones);
+    else if (r.type === 'aim') {
+      arrows.push({ from: r.from, to: r.bestC, good: true, label: 'Best' });
+      if (r.g < 2) arrows.push({ from: r.from, to: [r.pos.x, r.pos.y], good: false });
+      look = r.bestC;
+    } else if (r.type === 'shot') { goalZones.push(...r.zones); look = [20, 60]; }
+    else if (r.show && r.g < 2) {
+      const to = r.show === 'goal' ? [20, 60.2] : B.pos[r.show];
+      arrows.push({ from: B.pos.ball, to, good: true, label: 'Best' });
+      look = to;
+    }
+  }
+  if (zones.length) key.push(['#fde047', 'Best spot']);
+  if (arrows.some(a => a.good)) key.push(['#4ade80', 'Best ball']);
+  if (arrows.some(a => !a.good)) key.push(['#ef4444', 'Your ball']);
+  if (goalZones.length) key.push(['#4ade80', 'Best places to aim']);
+  POV.reveal({ zones, arrows, goalZones, look, key });
 }
 
 /* ---------------- quiz ---------------- */
@@ -3095,6 +3201,7 @@ function renderQuestion() {
   Q.youPos = q.trans ? { ...pos.blue[q.role] } : { ...BENCH };
   place(Q.you, Q.youPos);
   Q.benchHint = q.trans ? null : txt(Ls.you, BENCH.x, sy(BENCH.y) + 3, 'drag me!', 'drag-hint');
+  if (povPrep()) povRegular(q, pos);
 
   setSituation(sit, q.role);
   $('#youRole').textContent = INFO[q.role].name;
@@ -3119,6 +3226,7 @@ function lockSpot() {
   state.step = 'act';
   Q.dragging = false;
   Q.you.classList.add('locked');
+  if (pov()) { POV.ask(null); POV.runTo([Q.youPos.x, Q.youPos.y]); } // run there while the options come up
 
   const p = Q.youPos;
   let z = q.frame.target[q.role], d = distToZone(p, z);
@@ -3184,6 +3292,14 @@ function answer(i) {
   $('#showMeBtn').hidden = q.spot.stars === SPOT_MAX;
   $('#teamBtn').textContent = '👥 Team';
   showAnswer(fb, total, [`📍 Spot ${fb.spotOk ? '✅' : '❌'}`, `⚡ Move ${moveOk ? '✅' : '❌'}`]);
+  if (pov()) {
+    if (q.trans) {
+      const to = {};
+      for (const r of ROLES) { if (r !== q.role) to[r] = [f.blue[r].x, f.blue[r].y]; to['w' + r] = [f.white[r].x, f.white[r].y]; }
+      POV.moveAll(to, 1200);
+    }
+    POV.reveal({ zones: [z], key: [['#fde047', 'Best spot']] });
+  }
 }
 
 // The answer box, for both kinds of question.
@@ -3247,6 +3363,7 @@ function showMe() {
   if (Q.arrow) { Q.arrow.remove(); Q.arrow = null; }
   animateMoves([{ g: Q.you, from: { ...Q.youPos }, to: { x: z.x, y: z.y } }], 700);
   Q.youPos = { x: z.x, y: z.y };
+  if (pov()) POV.showRun([z.x, z.y]);
 }
 function drawTeamZones(sit, frame, me) {
   const Ls = Q.P.layers, group = el('g', null);
@@ -3261,9 +3378,10 @@ function drawTeamZones(sit, frame, me) {
 }
 function toggleTeam() {
   const q = cur();
-  if (Q.teamZones) { Q.teamZones.remove(); Q.teamZones = null; $('#teamBtn').textContent = '👥 Team'; return; }
+  if (Q.teamZones) { Q.teamZones.remove(); Q.teamZones = null; $('#teamBtn').textContent = '👥 Team'; if (pov()) POV.team(null); return; }
   Q.teamZones = drawTeamZones(q.sit, q.frame, q.role);
   $('#teamBtn').textContent = '👥 Hide';
+  if (pov()) POV.team(ROLES.filter(r => r !== q.role && !holdsBall(q.sit, r)).map(r => ({ ...q.frame.target[r], label: r })));
 }
 function next() {
   hush();
@@ -3332,8 +3450,10 @@ function drawActor(B, id, p) {
 }
 function drawActors(B) { for (const id in B.pos) drawActor(B, id, P(B.pos[id])); }
 // Play beats from where everyone is now. walk: { id: [from, to] } moves someone over the whole clip.
+// In POV mode the 3D view plays them too, and we carry on once both are done.
 function playBeats(B, beats, walk) {
-  return new Promise(resolve => {
+  const p3 = pov() && Q.bx === B ? POV.beats(beats, walk) : null;
+  const p2 = new Promise(resolve => {
     const tl = timeline(B.pos, beats);
     for (const id in walk || {}) {
       tl.segs[id] = [{ t0: 0, t1: tl.dur, a: walk[id][0], b: walk[id][1], air: false }];
@@ -3355,6 +3475,7 @@ function playBeats(B, beats, walk) {
     };
     requestAnimationFrame(step);
   });
+  return p3 ? Promise.all([p2, p3]) : p2;
 }
 function drawTrails(B) {
   B.trailG.textContent = '';
@@ -3409,6 +3530,7 @@ function renderBox(q) {
   B.trailG = el('g', null, Q.P.layers.arrows);
   makeActors(B);
   drawActors(B);
+  if (povPrep()) povBox(B);
 
   const poss = $('#poss');
   poss.className = 'poss we';
@@ -3423,7 +3545,7 @@ function renderBox(q) {
   renderDots();
   watching();
 
-  const st = ask.steps[0], text = fillRoles(st.q || defaultQ(st), q.role);
+  const st = ask.steps[0], text = povText(fillRoles(st.q || defaultQ(st), q.role));
   const who = (state.name ? state.name + ', you' : 'You') + `'re the ${INFO[q.role].name}.`;
   B.intro = `${who} ${sentence(fillRoles(sc.pill, q.role))}`;
   $('#stepTag').textContent = stepTag(B);
@@ -3437,9 +3559,10 @@ const stepTag = B => (B.ask.steps.length > 1 ? `${B.si + 1}. ` : '') + STEP_INFO
 
 function boxStep(B) {
   if (Q.bx !== B) return;
-  const st = B.ask.steps[B.si], text = fillRoles(st.q || defaultQ(st), B.role);
+  const st = B.ask.steps[B.si], text = povText(fillRoles(st.q || defaultQ(st), B.role));
   B.ready = true;
   state.step = 'box';
+  if (pov()) povStep(B, st);
   $('#replayBtn').hidden = st.type === 'shot';
   $('#stepTag').textContent = stepTag(B);
   $('#qtext').textContent = text;
@@ -3593,8 +3716,11 @@ function boxConfirm() {
   B.ready = false;
   Q.dragging = false;
   B.drag.g.classList.add('locked');
-  if (st.type === 'place') return finishStep(B, scorePlace(B, st, p, max));
-  if (st.type === 'shot') return finishStep(B, scoreShot(B, st, p, max));
+  // POV mode: you run to your spot, or take your shot, before the answer comes up.
+  const v = pov();
+  if (v) POV.ask(null);
+  if (st.type === 'place') { const r = scorePlace(B, st, p, max); return v ? POV.runTo([p.x, p.y]).then(() => finishStep(B, r)) : finishStep(B, r); }
+  if (st.type === 'shot') { const r = scoreShot(B, st, p, max); return v ? POV.shoot(p).then(() => finishStep(B, r)) : finishStep(B, r); }
   const r = scoreAim(B, st, p, max);
   if (B.aimLine) { B.aimLine.remove(); B.aimLine = null; }
   playBeats(B, [{ ms: 550, ball: r.end, air: B.ask.lofted ? 1 : 0 }]).then(() => { drawTrails(B); finishStep(B, r); });
@@ -3693,6 +3819,7 @@ function scanFlash(B) {
     $('#stepTag').textContent = stepTag(B);
     $('#qtext').textContent = '👀 Look up!';
     speak('Look up!');
+    if (pov()) POV.lookUp(); // lift your head from the ball; then it's up to you to look around
     const lay = el('g', null, Q.P.layers.arrows), you = B.pos[B.role];
     const label = txt(Q.P.layers.you, you[0], sy(you[1]) + 3.4, '👀 Look up!', 'scan-lbl'); // below YOU, on top of everyone
     const spots = Object.keys(B.pos).filter(id => ROLES.includes(id) && id !== B.role).map(id => B.pos[id]).concat([[20, 59.6]]).sort((a, b) => a[0] - b[0]);
@@ -3715,6 +3842,7 @@ function replayBox() {
   B.trailG.textContent = '';
   drawActors(B);
   watching();
+  if (pov()) povBox(B);
   let p = playLead(B);
   for (let i = 1; i <= B.si; i++) {
     const play = B.ask.steps[i].play;
@@ -3752,6 +3880,7 @@ function boxReveal(B) {
   $('#showMeBtn').hidden = !(last.g < 2 && (last.type === 'place' || last.type === 'aim' || last.show));
   $('#teamBtn').hidden = true;
   showAnswer(boxFeedback(B), total, B.results.map(r => `${STEP_INFO[r.type].ico} ${STEP_INFO[r.type].chip} ${GRADE_MARK[r.g]}`));
+  if (pov()) povRevealBox(B);
 }
 const nearestZone = r => r.zones.reduce((a, z) => (distToZone(r.pos, z) < distToZone(r.pos, a) ? z : a));
 /* Same three kinds of answer box as the positioning questions:
@@ -3791,9 +3920,11 @@ function showMeBox() {
     if (Q.arrow) { Q.arrow.remove(); Q.arrow = null; }
     animateMoves([{ g: B.els[B.role], from: r.pos, to: { x: z.x, y: z.y } }], 700);
     r.pos = { x: z.x, y: z.y };
+    if (pov()) POV.showRun([z.x, z.y]);
   } else if (r.type === 'aim') {
     B.paths = {};
     B.pos.ball = r.from;
+    if (pov()) POV.set('ball', r.from);
     playBeats(B, [{ ms: 750, ball: r.bestC, air: B.ask.lofted ? 1 : 0 }]);
   } else if (r.show) {
     // the right move: the ball goes to that teammate, or into the goal
@@ -3834,6 +3965,7 @@ function startCoach() {
   state.ci = 0;
   $('#coachRole').value = state.role;
   show('quiz');
+  povOff(); // coach view is always the pitch map
   renderCoach();
 }
 // Coach view steps through every positioning situation, then every attacking scene.
