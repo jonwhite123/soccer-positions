@@ -168,11 +168,12 @@ p { margin: 0; }
 .role-name { font-size: 1.625rem; font-weight: 700; }
 .best { color: var(--ok); font-weight: 600; margin-top: 0.125rem; min-height: 1.4em; }
 .go-card { display: grid; gap: 1rem; }
-.name-input {
+.position-field { display: grid; gap: 0.375rem; font-weight: 600; }
+.name-input, .position-input {
   font: inherit; width: 100%; padding: 0.6875rem 0.875rem; border-radius: 0.75rem;
   border: 0.125rem solid var(--line); background: var(--bg); color: var(--ink);
 }
-.name-input:focus { outline: none; border-color: var(--blue); }
+.name-input:focus, .position-input:focus { outline: none; border-color: var(--blue); }
 .toggles { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .toggle { position: relative; }
 .toggle input, .switch input { position: absolute; opacity: 0; width: 0.0625rem; height: 0.0625rem; }
@@ -181,6 +182,7 @@ p { margin: 0; }
   border: 0.125rem solid var(--line); font-weight: 600; cursor: pointer; user-select: none;
 }
 .toggle input:checked + span { background: var(--blue); border-color: var(--blue); color: #fff; }
+.toggle input:disabled + span { background: var(--line); border-color: var(--line); color: var(--muted); opacity: .65; cursor: not-allowed; }
 .toggle input:focus-visible + span { outline: 0.1875rem solid var(--gold); outline-offset: 0.125rem; }
 .switch { position: relative; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 500; }
 .switch .track { flex: none; width: 2.875rem; height: 1.75rem; border-radius: 62.4375rem; background: var(--line); position: relative; transition: background .2s; }
@@ -457,7 +459,7 @@ svg text { font-family: inherit; }
     <div class="brand"><span class="logo" aria-hidden="true">⚽</span><span class="brand-text">Where Should I Be?</span></div>
     <div class="top-actions">
       <button class="btn ghost small" id="voiceBtn" type="button"></button>
-      <button class="btn ghost small" id="homeBtn" type="button" hidden>← Back</button>
+      <button class="btn ghost small" id="homeBtn" type="button" hidden>New game</button>
       <button class="btn ghost small fs-btn" id="fsBtn" type="button"></button>
     </div>
   </header>
@@ -473,17 +475,19 @@ svg text { font-family: inherit; }
       </div>
       <div class="card go-card">
         <input class="name-input" id="nameInput" type="text" maxlength="20" placeholder="Your name" aria-label="Your name (optional)" autocomplete="off">
+        <div class="position-field">
+          <label for="positionInput">Your position</label>
+          <select class="position-input" id="positionInput"></select>
+        </div>
         <div class="toggles" role="group" aria-label="What to practice">
           <label class="toggle"><input type="checkbox" value="gk" checked><span>🥅 Goal kicks</span></label>
           <label class="toggle"><input type="checkbox" value="open" checked><span>⚡ Open play</span></label>
           <label class="toggle"><input type="checkbox" value="trans" checked><span>🔄 Transitions</span></label>
-          <label class="toggle"><input type="checkbox" value="box" checked><span>🎯 Shooting &amp; crossing</span></label>
+          <label class="toggle"><input type="checkbox" value="box" checked aria-describedby="boxNote"><span>🎯 Shooting &amp; crossing</span></label>
         </div>
         <p class="note" id="boxNote" hidden>🎯 Shooting &amp; crossing is for the Center Mid, the wings and the Striker.</p>
-        <label class="switch"><input type="checkbox" id="hardInput"><span class="track"></span><span>Hard mode (hide teammates)</span></label>
         <label class="switch" id="povSwitch"><input type="checkbox" id="povInput"><span class="track"></span><span>👀 POV mode (see it through your eyes)</span></label>
         <button class="btn primary big wide" id="startBtn" type="button">Play ⚽</button>
-        <button class="btn ghost small wide" id="coachBtn" type="button">👀 Coach view</button>
       </div>
     </section>
 
@@ -651,66 +655,67 @@ function countPlayer() {
      tip   – where to stand (short)
      act   – the right next move
      wrong – tempting-but-wrong moves (two are picked per question)
+   Keep choices similar in length and punctuation; put explanations in feedback.
    Defending and winning the ball back are all about INTENSITY.
 ------------------------------------------------------------------- */
 const JOBS = {
   // ---- we have the ball ----
-  gkHigh: { tip: 'Edge of your box.', act: 'Be ready to rush out and clear any long ball', wrong: ['Stand on your goal line and watch', 'Run forward to join the attack'] },
-  gkLow: { tip: 'A few steps off your line.', act: 'Talk to your defenders and be ready for a back-pass', wrong: ['Stand quietly on your goal line', 'Run out to the halfway line'] },
-  defGo: { tip: 'One goes, one stays. You go!', act: 'Push up behind the ball and win any loose ball', wrong: ['Stay back next to your partner', 'Sprint into their box to score'] },
-  defStay: { tip: 'One goes, one stays. You stay.', act: 'Stay back and be ready to stop a counter-attack', wrong: ['Run forward to join the attack too', 'Chase the ball wherever it goes'] },
-  defPartner: { tip: 'Spread wide on your side.', act: 'Get open so your partner can pass across to you', wrong: ['Stand right next to your partner', 'Run up to the halfway line'] },
-  cmShow: { tip: 'Find space in the middle.', act: 'Find space and call for the ball', wrong: ['Hide behind one of their players', 'Run all the way up to their box'] },
-  cmSupport: { tip: 'Get forward next to the ball.', act: "Find space near the ball so you're an easy pass", wrong: ['Stand far away from the play', 'Run back to our box'] },
-  cmEdge: { tip: 'Edge of their box.', act: 'Be ready to shoot or win any ball that pops out', wrong: ['Jog back to the halfway line', 'Run into the crowd next to the ball'] },
-  stTarget: { tip: 'High in the middle, level with their last defender.', act: 'Stay high and call for the long pass', wrong: ['Come all the way back for the ball', 'Stand next to our defender'] },
-  stRun: { tip: 'Furthest forward, level with their last defender.', act: 'Make a run behind their defenders for a through ball', wrong: ['Walk back toward our goal', 'Stand still and wait'] },
-  stBox: { tip: 'In the box, in front of goal.', act: 'Find space in front of goal, ready to shoot', wrong: ['Run out to the corner flag', 'Stop and watch the ball'] },
-  wingBackPost: { tip: 'Back post!', act: 'Sprint to the back post for the cross', wrong: ['Stay out on the touchline', 'Run over to the ball to help'] },
-  wingFar: { tip: 'Wide and high on your side.', act: 'Stay wide, ready for a switch pass', wrong: ['Run over to where the ball is', 'Drop back to our box'] },
-  wingBall: { tip: 'Wide and ahead of the ball.', act: "Stay wide and ahead so you're an easy pass up the line", wrong: ['Squeeze into the middle with everyone', 'Stand behind the ball'] },
-  wingWide: { tip: 'Wide and high.', act: 'Stretch them wide and be ready to run forward', wrong: ['Squeeze into the middle', 'Drop back behind the ball'] },
+  gkHigh: { tip: 'Edge of your box.', act: "Watch for long balls behind our defenders", wrong: ["Stay on your line while our team attacks", "Run up the pitch to help our striker"] },
+  gkLow: { tip: 'A few steps off your line.', act: "Talk to our defenders and offer a back-pass", wrong: ["Stay quiet and wait on your goal line", "Move up to halfway beside our defenders"] },
+  defGo: { tip: 'One goes, one stays. You go!', act: "Push up behind the ball and chase loose balls", wrong: ["Stay beside your partner near our own box", "Sprint past the striker into their penalty box"] },
+  defStay: { tip: 'One goes, one stays. You stay.', act: "Stay back, ready to stop a counter-attack", wrong: ["Push forward with your partner to help attack", "Follow the ball across to the other wing"] },
+  defPartner: { tip: 'Spread wide on your side.', act: "Spread out for a pass across from your partner", wrong: ["Move close beside your partner to get the ball", "Run ahead to halfway and wait for a pass"] },
+  cmShow: { tip: 'Find space in the middle.', act: "Find space in the middle and call for a pass", wrong: ["Wait behind their player for the ball", "Run up to their box beside our striker"] },
+  cmSupport: { tip: 'Get forward next to the ball.', act: "Find nearby space for an easy pass", wrong: ["Wait far from the ball", "Go back to our box beside the keeper"] },
+  cmEdge: { tip: 'Edge of their box.', act: "Get ready for a shot or a loose ball", wrong: ["Drop back to halfway for a pass", "Move into the crowd right beside the ball"] },
+  stTarget: { tip: 'High in the middle, level with their last defender.', act: "Stay high and call for a long pass", wrong: ["Come back to our box for a pass", "Stay beside our defender to offer a short pass"] },
+  stRun: { tip: 'Furthest forward, level with their last defender.', act: "Run behind their defenders for a through ball", wrong: ["Come back toward our goal to get a pass", "Stay still beside their defender and wait"] },
+  stBox: { tip: 'In the box, in front of goal.', act: "Find shooting space in front of their goal", wrong: ["Move out to the corner flag for a pass", "Stay still and watch what our winger does"] },
+  wingBackPost: { tip: 'Back post!', act: "Sprint to the back post", wrong: ["Stay wide by the touchline for a pass", "Cross over to the other wing to help"] },
+  wingFar: { tip: 'Wide and high on your side.', act: "Stay wide for a switch pass", wrong: ["Cross to the other wing to join the play", "Drop all the way back beside our defenders"] },
+  wingBall: { tip: 'Wide and ahead of the ball.', act: "Stay wide and ahead for a pass up the line", wrong: ["Move into the middle beside our other players", "Stay behind the ball to offer a pass back"] },
+  wingWide: { tip: 'Wide and high.', act: "Stay wide and get ready to run forward", wrong: ["Move into the middle near the ball", "Drop back beside our defenders"] },
 
   // ---- they have the ball ----
-  gkFar: { tip: 'Edge of your box.', act: 'Be ready to rush out and smash away any long ball!', wrong: ['Stand on your goal line', 'Run out to the halfway line'] },
-  gkNear: { tip: 'Between the ball and the middle of the goal.', act: 'Get set on your toes, ready to save', wrong: ['Stand flat-footed on your line', 'Run out to the halfway line'] },
-  defCover: { tip: 'Behind your partner, toward the middle.', act: 'Cover your partner and pounce if anyone gets past!', wrong: ['Run to press the ball too', 'Push up to the halfway line'] },
-  defHigh: { tip: 'Push up toward halfway.', act: 'Push up together and attack every long ball!', wrong: ['Drop deep into our box', 'Wait and watch the ball'] },
-  defNear: { tip: 'Goal-side, close to your partner.', act: 'Stay goal-side and jump in to win it on any bad touch!', wrong: ['Run forward to attack', 'Wait for someone else to win it'] },
-  cmDeep: { tip: 'Top of our box.', act: 'Block every shot and win every loose ball!', wrong: ['Run up to the halfway line', 'Stand and watch'] },
-  cmHigh: { tip: 'Just behind the press, in the middle.', act: 'Step up and steal any pass into the middle!', wrong: ['Drop back into our box', 'Wait for them to come to you'] },
-  cmDef: { tip: 'Middle, between the ball and our goal.', act: 'Shut the middle and tackle anyone who comes through!', wrong: ['Run up to join the striker', 'Go out to the touchline'] },
-  wingCorner: { tip: 'Corner of our box.', act: 'Sprint back and block the pass into the middle!', wrong: ['Stay up near halfway', 'Run out to the corner flag'] },
-  wingDouble: { tip: 'Goal-side, next to your defender.', act: 'Sprint back and trap them with your defender. Win it!', wrong: ['Jog back slowly', 'Wait up the pitch for a pass'] },
-  wingHelp: { tip: 'Tuck in and help, goal-side.', act: 'Sprint back NOW and help win the ball!', wrong: ['Wait up the pitch', 'Walk back to your spot'] },
-  wingPushUp: { tip: 'Push up on your side.', act: 'Push up and steal the pass out wide!', wrong: ['Drop back to our box', 'Stand and watch'] },
-  wingTuck: { tip: 'Tuck in, level with the ball.', act: 'Tuck in and steal any pass through the middle!', wrong: ['Stay out on the touchline', 'Run up to the striker'] },
-  wingFarDef: { tip: 'Tuck in toward the middle.', act: 'Sprint over and help win the ball in the middle!', wrong: ['Stay wide and wait', 'Walk back slowly'] },
-  wingFarHigh: { tip: 'Tuck in and push up.', act: 'Tuck in and steal the switch pass!', wrong: ['Run back to our box', 'Stay wide and wait'] },
-  stLow: { tip: 'Near halfway, in the middle.', act: 'Steal any pass back, then burst forward when we win it!', wrong: ['Walk around and rest', 'Run all the way back to our box'] },
-  stHigh: { tip: 'Push up in the middle.', act: 'Push up and steal the pass inside!', wrong: ['Walk back to halfway', 'Stand still and rest'] },
-  help: { tip: 'Right next to the ball.', act: 'Sprint in and trap them. Two of you, win it NOW!', wrong: ['Leave it to your teammate', 'Jog back to your spot', 'Block the pass and wait'] },
-  trap: { tip: 'Inside the ball. Trap them!', act: "Cut off the inside and steal it. They're trapped!", wrong: ['Wait in the middle and watch', 'Walk back to halfway'] },
-  counter: { tip: 'Swarm the ball with your teammates!', act: "Sprint in and win it back NOW. Don't stop until we have it!", wrong: ['Block the pass and wait', 'Jog back to your position', 'Let your teammate chase it'] },
-  pressD: { tip: "You're closest: press the ball!", act: "Go get the ball NOW! Stay on your feet and tackle until it's yours!", wrong: ['Wait for them to come to you', 'Back off toward our goal'] },
-  pressCM: { tip: "It's in the middle: press it!", act: "Get in their face NOW and win the ball! Don't let them turn!", wrong: ['Wait for them to come to you', 'Drop back behind our defenders'] },
-  pressW: { tip: "It's on your side: press it!", act: "Sprint at them and take the ball! Don't let them run down the line!", wrong: ['Wait for our defender to do it', 'Stay up the pitch for a pass'] },
-  pressST: { tip: "It's in their half: hunt it down!", act: "Hunt the ball down NOW. Don't stop until you win it!", wrong: ['Wait near halfway', 'Let them pass it around'] },
-  loser: { tip: 'Right on the ball, goal-side.', act: "Go get the ball now! Don't give up tackling until you have it!", wrong: ['Put your hands on your head and walk back', 'Jog back to your position', 'Wait for a teammate to win it'] },
-  loserGK: { tip: 'Between the ball and the goal.', act: 'Attack the ball NOW! Block it, smother it, grab it!', wrong: ['Walk back to your goal line', 'Wait for a defender to fix it'] },
-  loose: { tip: "You're closest. Get there first!", act: 'Attack the loose ball! Get there first and win it!', wrong: ['Wait to see who gets it', 'Let your teammate go for it', 'Back off and stay in your spot'] },
-  looseHelp: { tip: 'Right behind the ball.', act: 'Sprint in! If they get there first, tackle them and win it!', wrong: ['Wait to see who gets it', 'Jog back to your spot'] },
+  gkFar: { tip: 'Edge of your box.', act: "Get ready to rush out and clear a long ball", wrong: ["Stay on your goal line until they shoot", "Run up to halfway"] },
+  gkNear: { tip: 'Between the ball and the middle of the goal.', act: "Get set on your toes for the shot", wrong: ["Stand flat-footed on your line", "Run up to halfway"] },
+  defCover: { tip: 'Behind your partner, toward the middle.', act: "Cover your partner and tackle anyone getting past", wrong: ["Go right beside your partner to press the ball", "Push up toward halfway to wait for a pass"] },
+  defHigh: { tip: 'Push up toward halfway.', act: "Push up with your partner and attack long balls", wrong: ["Drop into our box beside the keeper", "Stay where you are and watch for a pass"] },
+  defNear: { tip: 'Goal-side, close to your partner.', act: "Stay goal-side and tackle on a bad touch", wrong: ["Run forward past the ball to start an attack", "Wait for a teammate to make the tackle"] },
+  cmDeep: { tip: 'Top of our box.', act: "Block shots and chase loose balls", wrong: ["Run up to halfway to offer a pass", "Stay where you are and watch their attack"] },
+  cmHigh: { tip: 'Just behind the press, in the middle.', act: "Step up and steal passes into the middle", wrong: ["Drop all the way into our own penalty box", "Hold your spot and wait for them to approach"] },
+  cmDef: { tip: 'Middle, between the ball and our goal.', act: "Shut the middle and tackle players coming through", wrong: ["Go up beside our striker to wait for a pass", "Move out to the touchline to watch their winger"] },
+  wingCorner: { tip: 'Corner of our box.', act: "Sprint back and block the pass inside", wrong: ["Stay up near halfway for a long pass", "Run toward the corner flag to mark the space"] },
+  wingDouble: { tip: 'Goal-side, next to your defender.', act: "Sprint back and trap them with your defender", wrong: ["Jog toward our goal and let the defender tackle", "Stay up the pitch to wait for a pass"] },
+  wingHelp: { tip: 'Tuck in and help, goal-side.', act: "Sprint back and help win it", wrong: ["Stay up the pitch ready for a long pass", "Walk back to your spot and watch the play"] },
+  wingPushUp: { tip: 'Push up on your side.', act: "Push up your side and steal their pass out wide", wrong: ["Drop back to our box to help our keeper", "Hold your spot and watch their next pass"] },
+  wingTuck: { tip: 'Tuck in, level with the ball.', act: "Tuck in and steal a pass through the middle", wrong: ["Stay wide by the touchline ready for a pass", "Run up beside our striker to wait for the ball"] },
+  wingFarDef: { tip: 'Tuck in toward the middle.', act: "Sprint across and help win the ball", wrong: ["Stay out wide and wait for a pass", "Walk back toward our goal behind the play"] },
+  wingFarHigh: { tip: 'Tuck in and push up.', act: "Tuck in and steal the switch pass", wrong: ["Run back into our box beside the keeper", "Stay wide by the touchline for our next attack"] },
+  stLow: { tip: 'Near halfway, in the middle.', act: "Steal a back-pass, then burst forward when we win it", wrong: ["Walk near halfway and save energy for our attack", "Run back into our box beside the defenders"] },
+  stHigh: { tip: 'Push up in the middle.', act: "Push up and steal the pass inside", wrong: ["Walk back to halfway", "Stand still and rest"] },
+  help: { tip: 'Right next to the ball.', act: "Sprint in and help your teammate win it", wrong: ["Let your teammate tackle alone", "Jog back to your usual spot on the pitch", "Block the pass and wait for them to move"] },
+  trap: { tip: 'Inside the ball. Trap them!', act: "Cut off their pass inside and steal the ball", wrong: ["Wait in the middle and watch", "Walk back toward halfway to wait for the ball"] },
+  counter: { tip: 'Swarm the ball with your teammates!', act: "Swarm the ball and keep tackling until we win it", wrong: ["Block their next pass and wait for them to move", "Jog back to your usual spot behind the ball", "Leave your teammate to chase the ball alone"] },
+  pressD: { tip: "You're closest: press the ball!", act: "Tackle now and keep going until you win it", wrong: ["Hold your position and wait for them to come", "Back off toward our goal to give them space"] },
+  pressCM: { tip: "It's in the middle: press it!", act: "Close them down and tackle before they turn", wrong: ["Hold your spot and wait for them to approach", "Drop behind our defenders to guard our box"] },
+  pressW: { tip: "It's on your side: press it!", act: "Sprint at them and win it", wrong: ["Stay here and let our defender make the tackle", "Wait up the pitch ready for a long pass"] },
+  pressST: { tip: "It's in their half: hunt it down!", act: "Hunt it down and keep tackling until you win it", wrong: ["Wait near halfway until our team gets the ball", "Let them pass around while you save your energy"] },
+  loser: { tip: 'Right on the ball, goal-side.', act: "Tackle now and keep trying to win it back", wrong: ["Walk back and let your teammates chase the ball", "Jog back to your usual spot behind the ball", "Wait here for a teammate to make the tackle"] },
+  loserGK: { tip: 'Between the ball and the goal.', act: "Attack the ball and grab or block it", wrong: ["Walk back to your goal line", "Stay here and let a defender win it back"] },
+  loose: { tip: "You're closest. Get there first!", act: "Sprint to the loose ball and keep going until you win it", wrong: ["Wait here until you see who gets there first", "Stay back and let your teammate chase it", "Back away from the ball to hold your spot"] },
+  looseHelp: { tip: 'Right behind the ball.', act: "Sprint in and tackle if they get there first", wrong: ["Hold your spot and wait to see who gets it", "Jog back behind the play to your usual spot"] },
 
   // ---- goal kicks ----
-  ogkD: { tip: 'Split wide to the corner of the box.', act: 'Get open and call for the pass from the keeper', wrong: ['Stand right next to the keeper', 'Run up to the halfway line'] },
-  ogkCM: { tip: 'Middle, in front of our box.', act: 'Get open in the middle and call for the ball', wrong: ['Hide behind their striker', 'Stand in our goal area'] },
-  ogkW: { tip: 'Wide by the touchline.', act: 'Stay wide, ready to get the ball and run', wrong: ['Come into the middle to get it', 'Stand in our box'] },
-  ogkST: { tip: 'High and in the middle.', act: 'Stay high to push their defenders back', wrong: ['Come back to get the ball from the keeper', 'Stand out on the touchline'] },
-  tgkGK: { tip: 'Top of your box.', act: 'Be ready to rush out and smash away a long kick!', wrong: ['Stand on your goal line', 'Run up to halfway'] },
-  tgkD: { tip: 'Goal-side of their striker.', act: 'Attack any long kick and win it!', wrong: ['Push up past their striker', 'Stand and watch the kick'] },
-  tgkCM: { tip: 'Just behind our front three.', act: 'Pounce on any pass into the middle and win it!', wrong: ['Drop back to our box', 'Stand still and watch'] },
-  tgkW: { tip: 'At the line on your side.', act: 'Sprint at their defender the second the keeper passes!', wrong: ['Cross the line early to get closer', 'Wait and watch where it goes'] },
-  tgkST: { tip: 'At the line, in the middle.', act: 'Sprint at the ball the second the keeper passes!', wrong: ['Cross the line early to get closer', 'Walk back to halfway'] },
+  ogkD: { tip: 'Split wide to the corner of the box.', act: "Get into space and call for a pass from our keeper", wrong: ["Move right beside the keeper to get the ball", "Run up to halfway and wait for a long kick"] },
+  ogkCM: { tip: 'Middle, in front of our box.', act: "Find space in the middle and call for it", wrong: ["Wait behind their striker for a pass through", "Move into our goal area beside the keeper"] },
+  ogkW: { tip: 'Wide by the touchline.', act: "Stay wide, ready to receive and run", wrong: ["Move into the middle to ask for a pass", "Drop into our box beside the keeper"] },
+  ogkST: { tip: 'High and in the middle.', act: "Stay high to push their defenders back", wrong: ["Come back beside our keeper to get the ball", "Wait out by the touchline to get a pass"] },
+  tgkGK: { tip: 'Top of your box.', act: "Be ready to rush out and clear a long kick", wrong: ["Stay on your goal line and wait for a shot", "Run up to halfway ready to win the kick"] },
+  tgkD: { tip: 'Goal-side of their striker.', act: "Attack the long kick and win it", wrong: ["Push up past their striker to reach the ball", "Hold your spot and watch where the kick goes"] },
+  tgkCM: { tip: 'Just behind our front three.', act: "Pounce on their pass into the middle and win it", wrong: ["Drop back to our box beside our defenders", "Stand still and watch their keeper pass it"] },
+  tgkW: { tip: 'At the line on your side.', act: "Sprint at their defender as soon as the keeper passes", wrong: ["Cross the build-out line before the keeper passes", "Hold your spot and watch where their pass goes"] },
+  tgkST: { tip: 'At the line, in the middle.', act: "Sprint at the ball when the keeper passes", wrong: ["Cross the build-out line early to get closer", "Walk back toward halfway while their keeper passes"] },
 };
 const PRESS_JOB = { GK: 'loserGK', LD: 'pressD', RD: 'pressD', CM: 'pressCM', LW: 'pressW', RW: 'pressW', ST: 'pressST' };
 
@@ -1240,10 +1245,10 @@ const BOX = [
         steps: [{
           type: 'choose', q: "You're at the byline, and their defender is blocking the way. What should you do?",
           opts: [
-            ['Pass it back to {CM} at the penalty spot (a cut-back pass)', 2, "Their defender is blocking the way to goal, but {CM} is all alone behind the play, facing the goal. Passes back like this score loads of goals.", 'CM'],
-            ['Stop, turn back inside, and dribble past your defender', 2, "Their defender is guarding the byline, so turn away from them, back inside. Now you're dribbling into the box with a much better angle to shoot or pass."],
-            ['Cross it hard across the front of the goal', 0, "Their defender is standing right in the way of that cross, and {ST} is marked. It would get blocked."],
-            ['Shoot from where you are', 0, "From the byline the goal is tiny, and their keeper is guarding the near post. You'd hit the keeper or the side netting."],
+            ['Cut it back to {CM}', 2, "Their defender is blocking the way to goal, but {CM} is all alone behind the play, facing the goal. Passes back like this score loads of goals.", 'CM'],
+            ['Turn inside and dribble past your defender', 2, "Their defender is guarding the byline, so turn away from them, back inside. Now you're dribbling into the box with a much better angle to shoot or pass."],
+            ['Cross it hard across the front of goal', 0, "Their defender is standing right in the way of that cross, and {ST} is marked. It would get blocked."],
+            ['Shoot now from this tight angle', 0, "From the byline the goal is tiny, and their keeper is guarding the near post. You'd hit the keeper or the side netting."],
             ['Keep dribbling along the byline toward goal', 0, "Their defender is right in front of you on the byline. You'd run straight into them and lose the ball."],
           ],
         }],
@@ -1262,7 +1267,7 @@ const BOX = [
           opts: [
             ['Take a touch to set it, then shoot low', 2, "You're not right on the goal line, so one touch to set the ball lets you pick your spot and keep it low."],
             ['Smash it first time as hard as you can', 0, "It's not a tap-in. Swinging at it first time is how shots fly over the bar."],
-            ['Pass it back out to {RW}', 0, "You're in the best spot on the pitch, facing the goal. This is your chance to shoot!"],
+            ['Pass back out to {RW} by the touchline', 0, "You're in the best spot on the pitch, facing the goal. This is your chance to shoot!"],
           ],
         }],
       },
@@ -1335,9 +1340,9 @@ const BOX = [
           type: 'choose', q: 'Nobody is in the box yet, and your defender is behind you. What should you do?',
           opts: [
             ['Dribble toward the goal', 2, "There's nobody in front of you, and your teammates aren't there yet. Carry the ball closer to goal. That makes the pass or shot easier and gives your teammates time to arrive."],
-            ['Cross it right away', 0, "Nobody is in the box yet, so a cross now goes straight to their keeper or a defender."],
-            ['Shoot from here', 0, "The angle is way too tight from out here, and their keeper is guarding the near post."],
-            ['Cut it back', 0, "There's no teammate behind you yet to cut it back to. Use the space in front of you first."],
+            ['Cross across the goal before anyone arrives', 0, "Nobody is in the box yet, so a cross now goes straight to their keeper or a defender."],
+            ['Shoot now from this tight angle', 0, "The angle is way too tight from out here, and their keeper is guarding the near post."],
+            ['Pass back toward the penalty spot', 0, "There's no teammate behind you yet to cut it back to. Use the space in front of you first."],
           ],
         }, {
           type: 'aim', rule: 'pass', q: 'You dribble in, and their keeper rushes out at you. Drag the ball to where it should go now.',
@@ -1367,9 +1372,9 @@ const BOX = [
         steps: [{
           type: 'choose', q: "You've cut inside past your defender. What should you do?",
           opts: [
-            ['Take a touch to set it, then shoot', 2, "You've got a clear sight of goal, and your teammates are marked. That's a shooting chance! A touch to set it helps you hit the target."],
+            ['Set it with a touch, then shoot', 2, "You've got a clear sight of goal, and your teammates are marked. That's a shooting chance! A touch to set it helps you hit the target."],
             ['Pass it back to {CM}', 1, "That's a safe pass, but {CM} is further away and marked. You had the better chance."],
-            ['Dribble out to the byline', 0, "That takes you away from the goal. You've got a shooting chance right now!"],
+            ['Dribble out wide toward the byline', 0, "That takes you away from the goal. You've got a shooting chance right now!"],
           ],
         }, { type: 'shot', kx: 4.2 }],
       },
@@ -1416,9 +1421,9 @@ const BOX = [
         steps: [{
           type: 'choose', q: "The cross is coming in fast, straight to you. What do you do?",
           opts: [
-            ['Take a touch away from your defender, then shoot', 2, "It's a fast ball, so swinging at it first time usually sends it wide or over. One good touch to control it, away from your defender, then shoot."],
+            ['Touch it away from your defender, then shoot', 2, "It's a fast ball, so swinging at it first time usually sends it wide or over. One good touch to control it, away from your defender, then shoot."],
             ['Hit it first time as hard as you can', 0, "A fast ball is really hard to hit cleanly first time. That's how shots end up way over the bar or wide."],
-            ['Let it run past you to {LW}', 0, "You're in the best spot in front of goal. Don't let it go! Control it and shoot."],
+            ['Let it roll across the box to {LW}', 0, "You're in the best spot in front of goal. Don't let it go! Control it and shoot."],
           ],
         }, { type: 'shot', kx: 4.4 }],
       },
@@ -1442,8 +1447,8 @@ const BOX = [
           type: 'choose', q: 'The ball is rolling slowly across to you, right in front of the goal. What do you do?',
           opts: [
             ['Tap it in first time', 2, "Slow ball, right in front of the goal: tap it in! Stopping it would give their keeper time to get across.", 'goal'],
-            ['Stop it, then shoot', 1, "Usually a touch is smart, but this ball is slow and you're right in front of goal. Tap it in before their keeper gets across."],
-            ['Pass it back to {CM}', 0, "You're two steps from an open goal. This one is yours to score!"],
+            ['Stop the ball before you take your shot', 1, "Usually a touch is smart, but this ball is slow and you're right in front of goal. Tap it in before their keeper gets across."],
+            ['Pass back to {CM} outside the six-yard box', 0, "You're two steps from an open goal. This one is yours to score!"],
           ],
         }],
       },
@@ -1481,8 +1486,8 @@ const BOX = [
         }, {
           type: 'choose', rule: 'tapin', q: "{ST} slides it across to you, nice and slow. Their keeper is stuck on the other side. What do you do?",
           opts: [
-            ['Side-foot it into the empty goal', 2, "The goal is open, and the ball is coming slowly. A calm side-foot is all you need."],
-            ['Stop it and look around', 0, "Stopping gives their keeper and defender time to get back. Just put it in!"],
+            ['Side-foot it into the open goal', 2, "The goal is open, and the ball is coming slowly. A calm side-foot is all you need."],
+            ['Stop the ball and look for a teammate', 0, "Stopping gives their keeper and defender time to get back. Just put it in!"],
             ['Blast it as hard as you can', 0, "You don't need power with an open goal. A big swing can miss the target."],
           ],
         }],
@@ -1509,7 +1514,7 @@ const BOX = [
           opts: [
             ['Control it first, then shoot', 2, "A bouncing ball is really hard to hit cleanly. Get it under control first, then you can aim your shot."],
             ['Volley it first time as hard as you can', 0, "Volleying a bouncing ball is super hard. It usually flies over the bar or way wide."],
-            ['Pass it back to our defenders', 0, "You're at the edge of their box, and their keeper is scrambling. This is a chance to score!"],
+            ['Pass back out of the box to our defenders', 0, "You're at the edge of their box, and their keeper is scrambling. This is a chance to score!"],
           ],
         }, { type: 'shot', kx: 5, q: 'Their keeper is still getting up. Where do you aim?' }],
       },
@@ -1518,9 +1523,9 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'Their keeper pushed your shot out. What should you do now?',
           opts: [
-            ['Follow in toward the goal, ready for a rebound', 2, "Keepers often can't hold the next shot either. Strikers who follow in score lots of easy goals."],
-            ['Stop and put your hands on your head', 0, "No time to be sad! The ball is still in play, and {CM} might shoot again."],
-            ['Run back toward halfway', 0, "The ball is still right by their goal. Stay close for a rebound!"],
+            ['Follow the shot for a rebound', 2, "Keepers often can't hold the next shot either. Strikers who follow in score lots of easy goals."],
+            ['Stop and watch to see if the shot goes in', 0, "No time to be sad! The ball is still in play, and {CM} might shoot again."],
+            ['Run back toward halfway to hold your position', 0, "The ball is still right by their goal. Stay close for a rebound!"],
           ],
         }],
       },
@@ -1586,10 +1591,10 @@ const BOX = [
         steps: [{
           type: 'choose', q: "You're one-on-one with their keeper. What do you do?",
           opts: [
-            ['Stay calm and shoot low, past the keeper', 2, "Calm and low wins! A low shot is the hardest kind for a keeper to reach."],
+            ['Shoot low past the keeper', 2, "Calm and low wins! A low shot is the hardest kind for a keeper to reach."],
             ['Dribble around their keeper', 2, "Their keeper is rushing at you. One quick touch around them, and you've got an open goal!"],
             ['Blast it as hard as you can', 0, "Blasting it usually sends it over the bar or straight at the keeper. Calm and low is better."],
-            ['Stop and wait for help', 0, "Their defender is right behind you. If you wait, they'll catch you and take the ball."],
+            ['Stop on the ball and wait for a teammate', 0, "Their defender is right behind you. If you wait, they'll catch you and take the ball."],
           ],
         }, { type: 'shot', kx: 3.2, big: true, q: "Let's say you shoot. Their keeper is rushing out. Where do you aim?" }],
       },
@@ -1622,8 +1627,8 @@ const BOX = [
           opts: [
             ['Take a touch to set it, then shoot low', 2, "Clear sight of goal and nobody close: shoot! It's not a tap-in, so set it with one touch and pick your spot."],
             ['Dribble into the box, then shoot', 2, "There's space in front of you, so a few touches closer makes the shot easier. Shoot before their defender gets to you!"],
-            ['Pass it out wide to {RW}', 1, "{RW} is marked and further from goal. You had a clear sight of goal, so this was your chance!"],
-            ['Smash it first time', 0, "It's not a tap-in, and swinging first time usually sends it over the bar. Take a touch and pick your spot."],
+            ['Pass it back out to {RW} on the wing', 1, "{RW} is marked and further from goal. You had a clear sight of goal, so this was your chance!"],
+            ['Smash the ball at goal without a first touch', 0, "It's not a tap-in, and swinging first time usually sends it over the bar. Take a touch and pick your spot."],
           ],
         }, { type: 'shot', kx: 3.4, q: 'Now you shoot. Where do you aim?' }],
       },
@@ -1676,10 +1681,10 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'You get the ball with your back to goal, and their defender is right behind you. What should you do?',
           opts: [
-            ['Pass it back to {CM}, who is facing the goal', 2, "{CM} is running in, facing the goal with space to shoot. A simple pass back is a great choice.", 'CM'],
-            ['Turn past your defender, then dribble in and shoot', 2, "Spin away from your defender, keeping your body between them and the ball, and you're in on goal. Then shoot!"],
-            ['Shoot first time without turning', 0, "With your back to goal and a defender right behind you, a shot without turning almost never works. Turn them first, or pass it back."],
-            ['Keep the ball and wait', 1, "Keeping it is OK, but waiting lets more defenders arrive. Turn and go, or pass it back to {CM}."],
+            ['Lay it back to {CM}', 2, "{CM} is running in, facing the goal with space to shoot. A simple pass back is a great choice.", 'CM'],
+            ['Turn your defender and dribble in for a shot', 2, "Spin away from your defender, keeping your body between them and the ball, and you're in on goal. Then shoot!"],
+            ['Shoot first time without turning toward goal', 0, "With your back to goal and a defender right behind you, a shot without turning almost never works. Turn them first, or pass it back."],
+            ['Hold the ball and wait for someone to help', 1, "Keeping it is OK, but waiting lets more defenders arrive. Turn and go, or pass it back to {CM}."],
           ],
         }],
       },
@@ -1695,9 +1700,9 @@ const BOX = [
         }, {
           type: 'choose', q: '{ST} passes it back to you. Their midfielder is rushing at you from one side. What do you do?',
           opts: [
-            ['Take your touch away from the defender, then shoot', 2, "Touch it away from the defender, into space. Then you have time to pick your spot."],
-            ['Take your touch toward the defender', 0, "That takes the ball straight to them!"],
-            ['Smash it first time', 0, "It's not a tap-in. A first-time swing from out here usually flies over the bar."],
+            ['Touch it away from the defender, then shoot', 2, "Touch it away from the defender, into space. Then you have time to pick your spot."],
+            ['Touch it toward the defender, then try to shoot', 0, "That takes the ball straight to them!"],
+            ['Smash it first time before taking a touch', 0, "It's not a tap-in. A first-time swing from out here usually flies over the bar."],
           ],
         }],
       },
@@ -1739,7 +1744,7 @@ const BOX = [
           opts: [
             ['Trap it first, then shoot', 2, "A fast, bouncing ball is the hardest kind to hit. Trap it, then shoot."],
             ['Swing at it first time', 0, "Swinging at a fast, bouncing ball usually misses or sends it miles over."],
-            ['Let it go past you', 0, "It's coming to you, in front of goal. Don't waste it!"],
+            ['Let the ball go past you to another teammate', 0, "It's coming to you, in front of goal. Don't waste it!"],
           ],
         }],
       },
@@ -1757,7 +1762,7 @@ const BOX = [
           opts: [
             ['Trap it first, then shoot', 2, "A fast, bouncing ball is the hardest kind to hit. Trap it, then shoot."],
             ['Swing at it first time', 0, "Swinging at a fast, bouncing ball usually misses or sends it miles over."],
-            ['Let it go past you', 0, "It's coming to you, in front of goal. Don't waste it!"],
+            ['Let the ball go past you to another teammate', 0, "It's coming to you, in front of goal. Don't waste it!"],
           ],
         }],
       },
@@ -1810,7 +1815,7 @@ const BOX = [
           opts: [
             ['Let it bounce, control it, then shoot', 2, "A bouncing ball is tricky. Control it first, then shoot."],
             ['Swing at it while it bounces', 0, "Swinging at a bouncing ball usually misses or flies over the bar."],
-            ['Leave it for a teammate', 0, "It's coming to you in front of goal. Take it!"],
+            ['Leave the bouncing ball for another teammate', 0, "It's coming to you in front of goal. Take it!"],
           ],
         }],
       },
@@ -1834,9 +1839,9 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'The high cross is dropping to you at the back post. What do you do?',
           opts: [
-            ['Let it drop and control it, then shoot', 2, "A dropping, bouncing ball is really hard to hit cleanly. Control it first with your foot or thigh, then shoot."],
+            ['Let it drop, control it, then shoot', 2, "A dropping, bouncing ball is really hard to hit cleanly. Control it first with your foot or thigh, then shoot."],
             ['Swing at it in the air first time', 0, "Volleys look cool, but they usually fly way over the bar or miss the ball completely."],
-            ['Leave it for {ST}', 0, "It's coming to you, and you're the closest to the goal. Take it!"],
+            ['Leave the cross for {ST} to deal with', 0, "It's coming to you, and you're the closest to the goal. Take it!"],
           ],
         }, { type: 'shot', kx: 2.6 }],
       },
@@ -1860,9 +1865,9 @@ const BOX = [
         steps: [{
           type: 'choose', q: "The pass comes to you in the box. You've lost your defender. What do you do?",
           opts: [
-            ['Take a touch toward goal, then shoot low', 2, "You're free in the box with a clear sight of goal, and your teammates are marked. This is your chance. Shoot!"],
+            ['Touch it toward goal, then shoot low', 2, "You're free in the box with a clear sight of goal, and your teammates are marked. This is your chance. Shoot!"],
             ['Pass it out to {RW}', 1, "{RW} is marked and further from goal. When you're the free player in the box, have a shot!"],
-            ['Smash it first time', 0, "It's not a tap-in, so a touch first helps you pick your spot and hit the target."],
+            ['Smash it first time without taking a touch', 0, "It's not a tap-in, so a touch first helps you pick your spot and hit the target."],
           ],
         }, { type: 'shot', kx: 3 }],
       },
@@ -1935,7 +1940,7 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'The ball bounces loose to you in their box! What do you do first?',
           opts: [
-            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Control the ball, then look up', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
             ['Shoot straight away without looking', 0, "Swinging at a bouncing ball without looking is how chances fly wide or get blocked. Control it and look up first."],
             ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
           ],
@@ -1969,7 +1974,7 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'The ball bounces to you in the crowd! What do you do first?',
           opts: [
-            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Control it, then look up to find a teammate', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
             ['Shoot straight away without looking', 0, "There are bodies everywhere in front of you. A panicked shot would hit one of them. Control it and look up first."],
             ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
           ],
@@ -2013,7 +2018,7 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'The ball squirts out to you near the byline. What do you do first?',
           opts: [
-            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Control it, then look up for a pass', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
             ['Blast it at goal straight away', 0, "From this tight angle, a panicked shot almost never goes in. Control it and look up first."],
             ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
           ],
@@ -2047,7 +2052,7 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'The ball bounces out to you inside the box. What do you do first?',
           opts: [
-            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Control it first, then look up for options', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
             ['Shoot straight away without looking', 0, "Swinging at a bouncing ball without looking is how chances fly wide. Control it and look up first."],
             ['Kick it anywhere to get rid of it', 0, "It's our ball in their box! Don't waste it. Control it and look up."],
           ],
@@ -2081,7 +2086,7 @@ const BOX = [
         steps: [{
           type: 'choose', q: 'The ball drops to you near the edge of the box. What do you do first?',
           opts: [
-            ['Control it, then look up to see who is free', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
+            ['Control it, then look up for a pass', 2, "Scrambles make everyone panic. One touch to control it, then a quick look up shows you the best choice."],
             ['Shoot straight away without looking', 0, "There are bodies everywhere in front of you. A panicked shot would hit one of them. Control it and look up first."],
             ['Kick it anywhere to get rid of it', 0, "It's our ball near their box! Don't waste it. Control it and look up."],
           ],
@@ -2791,7 +2796,7 @@ const state = {
   role: store.get('role', 'RD'),
   name: store.get('name', ''),
   phases: store.get('phases', ['gk', 'open', 'trans']),
-  hard: store.get('hard', false),
+  hard: false, // Teammates stay visible, including for players who saved the old hard-mode setting.
   pov: store.get('pov', false), // POV mode: off unless the player switches it on
   round: [], i: 0, stars: 0, step: 'place', moved: false,
   coach: false, ci: 0,
@@ -2811,6 +2816,13 @@ function show(screen) {
 const S = {};
 function initSetup() {
   const P = drawPitch($('#setupPitch'), 's');
+  const positionInput = $('#positionInput');
+  for (const r of ROLES) {
+    const o = document.createElement('option');
+    o.value = r; o.textContent = INFO[r].name;
+    positionInput.appendChild(o);
+  }
+  positionInput.addEventListener('change', () => selectRole(positionInput.value));
   S.picks = {};
   for (const r of ROLES) {
     const g = makePlayer(P.layers.players, 'blue', r);
@@ -2835,22 +2847,20 @@ function initSetup() {
   document.querySelectorAll('.toggles input').forEach(inp => {
     inp.checked = state.phases.includes(inp.value);
     inp.addEventListener('change', () => {
-      const on = [...document.querySelectorAll('.toggles input:checked')].map(i => i.value);
+      const on = [...document.querySelectorAll('.toggles input:checked:not(:disabled)')].map(i => i.value);
       if (!on.length) { inp.checked = true; return; }
+      // Keep the attacking preference while its chip is unavailable for this position.
+      if (!BOX_ROLES.includes(state.role) && state.phases.includes('box')) on.push('box');
       state.phases = on;
       store.set('phases', on);
-      renderBoxNote();
+      renderPracticeOptions();
     });
   });
-  const hard = $('#hardInput');
-  hard.checked = !!state.hard;
-  hard.addEventListener('change', () => { state.hard = hard.checked; store.set('hard', state.hard); });
   const povIn = $('#povInput');
   $('#povSwitch').hidden = !window.POV; // pov.js didn't load: no POV option
   povIn.checked = !!state.pov;
   povIn.addEventListener('change', () => { state.pov = povIn.checked; store.set('pov', state.pov); });
   $('#startBtn').addEventListener('click', startRound);
-  $('#coachBtn').addEventListener('click', startCoach);
   $('#voiceBtn').addEventListener('click', () => {
     voice.on = !voice.on;
     store.set('voice', voice.on);
@@ -2872,13 +2882,24 @@ function selectRole(r) {
     S.picks[k].setAttribute('aria-pressed', String(k === r));
   }
   S.picks[r].parentNode.appendChild(S.picks[r]);
+  $('#positionInput').value = r;
   $('#roleName').textContent = INFO[r].name;
   const best = store.get('best:' + r, null);
   $('#roleBest').textContent = best ? `Best: ${best.stars} of ${best.max} ⭐` : '';
-  renderBoxNote();
+  renderPracticeOptions();
 }
-function renderBoxNote() {
-  $('#boxNote').hidden = !(state.phases.includes('box') && !BOX_ROLES.includes(state.role));
+function renderPracticeOptions() {
+  const available = BOX_ROLES.includes(state.role), box = $('.toggles input[value="box"]');
+  // Switching from attacking-only practice must still leave something playable selected.
+  if (!available && !state.phases.some(c => c !== 'box')) {
+    state.phases = ['gk', 'open', 'trans', ...state.phases];
+    store.set('phases', state.phases);
+  }
+  document.querySelectorAll('.toggles input').forEach(inp => {
+    inp.checked = state.phases.includes(inp.value) && (inp.value !== 'box' || available);
+  });
+  box.disabled = !available;
+  $('#boxNote').hidden = available;
 }
 
 /* ---------------- POV mode ----------------
@@ -3044,9 +3065,9 @@ const POV_PLAYS = {
   'cornerShort:RW': [{ right: { play: [toYou(800)], next: [{
     type: 'choose', rule: 'carry', q: '{CM} plays it short to you, and you have space. What now?',
     opts: [
-      ['Dribble in toward the goal', 2, "You've got space, so carry the ball closer. Then you can shoot, or find a teammate."],
-      ['Cross it high into the crowd straight away', 0, 'Everyone in the box is still marked, and their keeper would catch a high ball. Use your space first.'],
-      ['Pass it straight back to {CM}', 1, 'Safe, but you had space to use. Carry it closer first.'],
+      ['Dribble closer to goal using the space', 2, "You've got space, so carry the ball closer. Then you can shoot, or find a teammate."],
+      ['Cross it high into the crowded box straight away', 0, 'Everyone in the box is still marked, and their keeper would catch a high ball. Use your space first.'],
+      ['Pass straight back to {CM}', 1, 'Safe, but you had space to use. Carry it closer first.'],
     ],
     pov: { opts: [{ play: [{ ms: 1000, RW: [31.4, 55.2], ball: [30.7, 55.5], e: [30.2, 53.8] }, P_SHOT], end: 'You dribbled in and scored! ⚽' }, 'keeper', { kind: 'safe', to: 'CM' }] },
   }] } }],
