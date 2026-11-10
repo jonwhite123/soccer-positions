@@ -51,6 +51,7 @@ const S = {
   mode: null, onPick: null, mark: null, shotInfo: null,
   reveal: null, camOff: null, hidden: new Set(), team: null, restrict: null,
   looked: false, hits: [], boxes: {}, turn: 0, tilt: 0, runPath: null, introP: null,
+  directionAt: null, directionOrigin: null,
 };
 
 /* ---------------- setting up ---------------- */
@@ -126,6 +127,7 @@ function start(cfg) {
   S.prevBall = S.ball.slice(0, 2);
   S.mode = null; S.onPick = null; S.mark = null; S.reveal = null; S.camOff = null; S.team = null; S.shotInfo = null;
   S.look = 'ball'; S.lookCap = 22; S.lockLook = false; S.busy = false; S.looked = false; S.turn = 0; S.tilt = 0;
+  S.directionAt = null; S.directionOrigin = null;
   const me = S.pos[S.you];
   cam.x = me[0]; cam.y = me[1]; cam.zoom = 1;
   cam.yaw = bearing(me, S.ball);
@@ -527,6 +529,24 @@ function groundArrow(a, b, color, w = 0.34) {
   fillWorld([[a[0] + nx * w / 2, a[1] + ny * w / 2], [e[0] + nx * w / 2, e[1] + ny * w / 2], [e[0] - nx * w / 2, e[1] - ny * w / 2], [a[0] - nx * w / 2, a[1] - ny * w / 2]], color);
   fillWorld([[e[0] + nx * w * 1.7, e[1] + ny * w * 1.7], [b[0], b[1]], [e[0] - nx * w * 1.7, e[1] - ny * w * 1.7]], color);
 }
+// Brief training arrows, painted on the grass around your starting spot.
+// They stay fixed on the pitch as you turn, and always point toward their goal.
+function drawAttackDirection() {
+  if (S.directionAt == null || !S.directionOrigin || S.reveal) return;
+  const alpha = 0.9 * clamp((3000 - (NOW - S.directionAt)) / 900, 0, 1);
+  if (!alpha) return;
+  const [x, y] = S.directionOrigin;
+  const radius = clamp((60 - y) * 0.45, 1.25, 4.5);
+  for (let i = 0; i < 8; i++) {
+    const a = [x + Math.sin(i * Math.PI / 4) * radius, y + Math.cos(i * Math.PI / 4) * radius];
+    const d = dist(a, [20, 60]);
+    if (a[0] < 1 || a[0] > 39 || a[1] < 1 || a[1] > 59.5 || d < 1) continue;
+    const len = Math.min(2.8, d - 0.3);
+    const b = [a[0] + (20 - a[0]) / d * len, a[1] + (60 - a[1]) / d * len];
+    groundArrow(a, b, `rgba(120,53,15,${alpha * 0.8})`, 0.72);
+    groundArrow(a, b, `rgba(253,224,71,${alpha})`, 0.48);
+  }
+}
 function dots(a, b, color) {
   const L = dist(a, b);
   for (let d = 0.9; d < L - 0.6; d += 0.75) { const t = d / L; fillWorld(circlePts(lerp(a[0], b[0], t), lerp(a[1], b[1], t), 0.1, 8), color); }
@@ -544,9 +564,29 @@ function tag3d(x, y, z, text, bg, fg = '#fff') {
   const p = proj(x, y, z); if (!p) return;
   tag(p[0], p[1], text, bg, fg, clamp(0.5 * F / p[2], 12, 17));
 }
+function drawScoringGoalSign() {
+  const p = proj(20, 60, 3.2), base = proj(20, 60, 0), bar = proj(20, 60, 2);
+  if (!p || !base || !bar || p[0] < 0 || p[0] > W || base[1] < 0 || bar[1] > H) return;
+  const text = '⚽ We score here! 🎉';
+  const size = clamp(W * 0.045, 20, 32);
+  ctx.save();
+  ctx.font = `700 ${size}px Fredoka, ui-rounded, system-ui, sans-serif`;
+  const width = ctx.measureText(text).width + size * 0.9;
+  const scale = Math.min(1, Math.max(1, W - 24) / width), fs = size * scale;
+  const w = width * scale, h = fs * 1.45;
+  const x = clamp(p[0], w / 2 + 8, W - w / 2 - 8);
+  const y = clamp(p[1], h + 44, H - 16);
+  // A chunky speech bubble points down at the goal; leave room for the compass.
+  ctx.fillStyle = '#fde047'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x - 9, y - 2); ctx.lineTo(x, y + 11); ctx.lineTo(x + 9, y - 2); ctx.stroke(); ctx.fill();
+  tag(x, y, text, '#fde047', '#422006', fs);
+  roundRect(x - w / 2, y - h, w, h, h / 2); ctx.stroke();
+  ctx.restore();
+}
 const ZONE_FILL = p => `rgba(253,224,71,${0.34 + 0.14 * p})`;
 function drawMarks() {
   const pulse = 0.5 + 0.5 * Math.sin(NOW / 260), rv = S.reveal;
+  drawAttackDirection();
   if (S.team) for (const z of S.team) {
     const pts = rectPts(z.x - z.hw, z.y - z.hh, z.x + z.hw, z.y + z.hh);
     fillWorld(pts, 'rgba(147,197,253,.22)'); strokeWorld(pts, 'rgba(219,234,254,.9)', 1.5);
@@ -652,11 +692,9 @@ function render() {
     tag((b.x0 + b.x1) / 2, b.top - 4, me ? 'You' : id, me ? '#fbbf24' : id === 'GK' ? '#15803d' : '#1d4ed8', me ? '#0f172a' : '#fff', clamp(0.32 * F / b.d, me ? 13 : 10, me ? 17 : 15));
   }
   if (S.team) for (const z of S.team) if (z.label) tag3d(z.x, z.y, 0.05, z.label, 'rgba(30,58,138,.85)');
-  // Signs over both goals, big enough to read from the other end, so you always know which is which.
-  for (const [gy, text, bg, fg] of [[60, '⚽ Their goal', '#f59e0b', '#1c1917'], [0, '🛡️ Our goal', '#1d4ed8', '#fff']]) {
-    const p = proj(20, gy, 2.75);
-    if (p) tag(p[0], p[1], text, bg, fg, clamp(0.55 * F / p[2], 12, 18));
-  }
+  drawScoringGoalSign();
+  const ourGoal = proj(20, 0, 2.75);
+  if (ourGoal) tag(ourGoal[0], ourGoal[1], '🛡️ Our goal', '#1d4ed8', '#fff', clamp(0.55 * F / ourGoal[2], 12, 18));
   if (S.restrict === 'theirGK') tag3d(clamp(cam.x, 6, 34), BUILD_OUT.opp, 0.05, 'No blue shirts past here yet!', 'rgba(30,58,138,.88)');
   else if (S.restrict === 'ourGK') tag3d(clamp(cam.x, 6, 34), BUILD_OUT.own, 0.05, 'No white shirts past here yet!', 'rgba(30,41,59,.85)');
   const rv = S.reveal;
@@ -971,6 +1009,13 @@ function lockLook(on) {
    onPick may return the spot the game actually used (it keeps spots in bounds). */
 function ask(mode, onPick, opts) {
   if (!S.on) return;
+  // Start the three seconds when the first decision is ready, after any lead-up.
+  if (!S.directionOrigin) {
+    const tok = S.token;
+    S.directionOrigin = S.pos[S.you].slice();
+    const showDirection = () => { if (S.on && tok === S.token) S.directionAt = performance.now(); };
+    if (S.introP) S.introP.then(showDirection); else showDirection();
+  }
   S.mode = mode; S.onPick = onPick || null; S.mark = null; S.looked = false;
   cv.classList.toggle('tap', !!mode);
   if (mode === 'shot') {
